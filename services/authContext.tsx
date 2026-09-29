@@ -24,6 +24,7 @@ interface AuthContextType {
   isGuest: boolean;
   isAdmin: boolean;
   signInWithGoogle: (forceRedirect?: boolean) => Promise<void>;
+  signInWithEmail: (email: string, displayName?: string) => Promise<void>;
   signOutUser: () => Promise<void>;
   updateLanguage: (lang: string) => Promise<void>;
   updateUserPlan: (newPlan: PlanType) => Promise<void>;
@@ -157,7 +158,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } else {
         setUser(null);
-        setUserProfile(getOrCreateGuestProfile());
+        let activeProfile: UserProfile | null = null;
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('mpa_active_user_profile');
+          if (stored) {
+            try {
+              activeProfile = JSON.parse(stored);
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        }
+        if (activeProfile && activeProfile.email && !activeProfile.email.includes('guest@')) {
+          activeProfile.isAdmin = isUserAdmin(activeProfile.email);
+          setUserProfile(activeProfile);
+        } else {
+          setUserProfile(getOrCreateGuestProfile());
+        }
       }
       setLoading(false);
     });
@@ -206,16 +223,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithEmail = async (email: string, displayName?: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      throw new Error('Please enter a valid email address.');
+    }
+    const cleanName = displayName?.trim() || cleanEmail.split('@')[0] || 'Ugandan User';
+    const adminCheck = isUserAdmin(cleanEmail);
+    // Deterministic userId for consistent profile sync
+    const hash = Array.from(cleanEmail).reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 0);
+    const userId = 'usr_' + hash.toString(36);
+
+    let profile: UserProfile = {
+      userId,
+      name: cleanName,
+      email: cleanEmail,
+      language: userProfile?.language || 'en',
+      plan: userProfile?.plan || 'free',
+      monthlyAiUsage: userProfile?.monthlyAiUsage || 0,
+      usageResetDate: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isAdmin: adminCheck,
+    };
+
+    try {
+      const existing = await DatabaseService.getUserProfile(userId);
+      if (existing) {
+        profile = { ...existing, isAdmin: adminCheck };
+      } else {
+        await DatabaseService.saveUserProfile(profile);
+      }
+    } catch (e) {
+      console.warn('Database profile sync note:', e);
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mpa_active_user_profile', JSON.stringify(profile));
+    }
+    setUserProfile(profile);
+    setShowAuthModal(false);
+  };
 
   const signOutUser = async () => {
     try {
       await fbSignOut(auth);
-      setUser(null);
-      setUserProfile(getOrCreateGuestProfile());
     } catch (e) {
       console.error('Sign out error', e);
     }
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('mpa_active_user_profile');
+    }
+    setUser(null);
+    setUserProfile(getOrCreateGuestProfile());
   };
+
 
   const updateLanguage = async (lang: string) => {
     if (!userProfile) return;
@@ -293,7 +355,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const isAdmin = Boolean(userProfile?.isAdmin || (user?.email && isUserAdmin(user.email)));
+  const isAdmin = Boolean(
+    userProfile?.isAdmin ||
+    (user?.email && isUserAdmin(user.email)) ||
+    (userProfile?.email && isUserAdmin(userProfile.email))
+  );
+
+  const isGuest = Boolean(
+    !user &&
+    (!userProfile || userProfile.userId.startsWith('guest_') || !userProfile.email || userProfile.email.includes('guest@'))
+  );
 
   return (
     <AuthContext.Provider
@@ -301,9 +372,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         userProfile,
         loading,
-        isGuest: !user,
+        isGuest,
         isAdmin,
         signInWithGoogle,
+        signInWithEmail,
         signOutUser,
         updateLanguage,
         updateUserPlan,

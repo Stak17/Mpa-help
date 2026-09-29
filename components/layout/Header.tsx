@@ -53,6 +53,11 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const isSignedIn = Boolean(
+    user ||
+    (userProfile && !userProfile.userId.startsWith('guest_') && userProfile.email && !userProfile.email.includes('guest@'))
+  );
+
   return (
     <header className="sticky top-0 z-40 w-full max-w-[100vw] overflow-x-hidden bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-b border-stone-200 dark:border-stone-800 transition-colors">
       <div className="w-full max-w-6xl mx-auto px-2.5 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-1 sm:gap-3">
@@ -136,7 +141,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Authentication & Profile Section */}
-          {user ? (
+          {isSignedIn ? (
             <div className="flex items-center gap-1 sm:gap-1.5 pl-1 border-l border-stone-200 dark:border-stone-800 shrink-0">
               {/* Account profile link */}
               <button

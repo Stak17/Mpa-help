@@ -35,6 +35,11 @@ export const AccountView: React.FC<AccountViewProps> = ({ onOpenLegal, setActive
     isAdmin,
   } = useAuth();
 
+  const isSignedIn = Boolean(
+    user ||
+    (userProfile && !userProfile.userId.startsWith('guest_') && userProfile.email && !userProfile.email.includes('guest@'))
+  );
+
   const usageInfo = checkCanUseAI();
   const currentPlan = PLANS[userProfile?.plan || 'free'];
   const percentUsed = Math.min(100, Math.round((usageInfo.currentUsage / usageInfo.limit) * 100));
@@ -74,7 +79,7 @@ export const AccountView: React.FC<AccountViewProps> = ({ onOpenLegal, setActive
             </div>
           </div>
 
-          {!user ? (
+          {!isSignedIn ? (
             <button
               onClick={() => setShowAuthModal(true)}
               className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-xs flex items-center gap-1.5"
