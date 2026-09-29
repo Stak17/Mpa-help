@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Shield, FileText, Trash2 } from 'lucide-react';
 import { useAuth } from '@/services/authContext';
+import { useToast } from '@/components/common/ToastProvider';
 
 interface LegalModalProps {
   type: 'privacy' | 'terms' | 'deletion' | null;
@@ -11,6 +12,7 @@ interface LegalModalProps {
 
 export const LegalModal: React.FC<LegalModalProps> = ({ type, onClose }) => {
   const { user, deleteUserAccount } = useAuth();
+  const toast = useToast();
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
 
@@ -20,10 +22,11 @@ export const LegalModal: React.FC<LegalModalProps> = ({ type, onClose }) => {
     setDeleting(true);
     try {
       await deleteUserAccount();
+      toast.success('All your stored data was permanently erased.');
       onClose();
     } catch (e) {
       console.error(e);
-      alert('Could not delete data. Please try again.');
+      toast.error('Could not delete data. Please try again.');
     } finally {
       setDeleting(false);
     }

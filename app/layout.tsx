@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/services/authContext';
+import { ToastProvider } from '@/components/common/ToastProvider';
 
 export const viewport: Viewport = {
   themeColor: '#0c0a09',
@@ -49,7 +50,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className="antialiased min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 overflow-x-hidden w-full max-w-[100vw] selection:bg-emerald-500 selection:text-white"
         suppressHydrationWarning
       >
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

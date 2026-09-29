@@ -15,9 +15,11 @@ import {
 import { useAuth } from '@/services/authContext';
 import { DatabaseService } from '@/services/databaseService';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
+import { useToast } from '@/components/common/ToastProvider';
 
 export const WriteView: React.FC = () => {
   const { user, userProfile, recordUsage } = useAuth();
+  const toast = useToast();
 
   const categories = [
     { id: 'job_application', label: 'Job Application Letter' },
@@ -93,6 +95,7 @@ export const WriteView: React.FC = () => {
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedDoc);
     setCopied(true);
+    toast.success('Document copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -108,7 +111,6 @@ export const WriteView: React.FC = () => {
       }
     } else {
       handleCopy();
-      alert('Document copied to clipboard!');
     }
   };
 
@@ -126,31 +128,17 @@ export const WriteView: React.FC = () => {
       };
       await DatabaseService.saveDocument(docItem);
       setSaved(true);
+      toast.success('Document saved to your library!');
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
       console.error(e);
-      alert('Failed to save document.');
+      toast.error('Failed to save document.');
     }
   };
 
   const handlePrint = () => {
     if (typeof window !== 'undefined') {
-      const printWindow = window.open('', '', 'width=800,height=600');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>${categories.find((c) => c.id === selectedCategory)?.label}</title>
-              <style>
-                body { font-family: sans-serif; padding: 40px; line-height: 1.6; white-space: pre-wrap; font-size: 14px; }
-              </style>
-            </head>
-            <body>${generatedDoc}</body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-      }
+      window.print();
     }
   };
 

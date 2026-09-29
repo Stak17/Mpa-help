@@ -18,9 +18,11 @@ import { ExpenseItem } from '@/types';
 import { DatabaseService } from '@/services/databaseService';
 import { formatUGX } from '@/config/plans';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
+import { useToast } from '@/components/common/ToastProvider';
 
 export const MoneyView: React.FC = () => {
   const { user, userProfile, recordUsage } = useAuth();
+  const toast = useToast();
 
   const standardCategories = [
     'Rent',
@@ -183,9 +185,10 @@ export const MoneyView: React.FC = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to analyze budget.');
       setAiAdvice(data.advice);
+      toast.success('Budget analysis ready!');
     } catch (e: any) {
       console.error(e);
-      alert(e.message || 'Could not connect to AI advisor.');
+      toast.error(e.message || 'Could not connect to AI advisor.');
     } finally {
       setAiLoading(false);
     }

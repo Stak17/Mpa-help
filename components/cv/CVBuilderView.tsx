@@ -18,9 +18,11 @@ import { useAuth } from '@/services/authContext';
 import { CVData, EducationEntry, ExperienceEntry, ReferenceEntry } from '@/types';
 import { DatabaseService } from '@/services/databaseService';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
+import { useToast } from '@/components/common/ToastProvider';
 
 export const CVBuilderView: React.FC = () => {
   const { user, userProfile, recordUsage } = useAuth();
+  const toast = useToast();
 
   const [activeStep, setActiveStep] = useState<'form' | 'preview'>('form');
 
@@ -207,38 +209,24 @@ export const CVBuilderView: React.FC = () => {
       };
       await DatabaseService.saveDocument(docItem);
       setSaved(true);
+      toast.success('CV saved to your library!');
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       console.error(e);
-      alert('Could not save CV.');
+      toast.error('Could not save CV.');
     }
   };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedMarkdown);
     setCopied(true);
+    toast.success('CV copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handlePrint = () => {
     if (typeof window !== 'undefined') {
-      const w = window.open('', '', 'width=800,height=600');
-      if (w) {
-        w.document.write(`
-          <html>
-            <head>
-              <title>CV - ${cvData.fullName}</title>
-              <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; line-height: 1.6; white-space: pre-wrap; font-size: 13px; color: #111; }
-                h1 { font-size: 22px; border-bottom: 2px solid #059669; padding-bottom: 6px; }
-              </style>
-            </head>
-            <body>${generatedMarkdown}</body>
-          </html>
-        `);
-        w.document.close();
-        w.print();
-      }
+      window.print();
     }
   };
 

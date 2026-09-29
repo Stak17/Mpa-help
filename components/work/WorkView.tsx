@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/services/authContext';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
+import { useToast } from '@/components/common/ToastProvider';
 
 interface WorkViewProps {
   onOpenCVBuilder: () => void;
@@ -22,6 +23,7 @@ interface WorkViewProps {
 
 export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCoverLetter }) => {
   const { recordUsage } = useAuth();
+  const toast = useToast();
 
   const [activeTab, setActiveTab] = useState<'interview' | 'career_profile'>('interview');
 
@@ -76,9 +78,10 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
 
       setGeneratedQuestions(data.result);
       setCurrentQuestion(`Tell me about a time you handled a difficult customer or challenging situation at work.`);
+      toast.success('Interview questions ready!');
     } catch (e: any) {
       console.error(e);
-      alert('Could not generate questions. Please try again.');
+      toast.error('Could not generate questions. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -106,9 +109,10 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setFeedback(data.result);
+      toast.success('Evaluation and tips ready!');
     } catch (e: any) {
       console.error(e);
-      alert('Evaluation failed. Please try again.');
+      toast.error('Evaluation failed. Please try again.');
     } finally {
       setEvaluating(false);
     }
@@ -369,8 +373,8 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
 
           <div className="pt-3 border-t border-stone-100 dark:border-stone-800 flex justify-end">
             <button
-              onClick={() => alert('Career profile saved!')}
-              className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-xs transition hover:bg-emerald-700"
+              onClick={() => toast.success('Career profile saved!')}
+              className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-xs transition hover:bg-emerald-700 cursor-pointer"
             >
               Save Profile
             </button>

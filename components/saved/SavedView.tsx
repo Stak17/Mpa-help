@@ -21,9 +21,11 @@ import { useAuth } from '@/services/authContext';
 import { DocumentItem } from '@/types';
 import { DatabaseService } from '@/services/databaseService';
 import { EmptyState } from '@/components/common/EmptyState';
+import { useToast } from '@/components/common/ToastProvider';
 
 export const SavedView: React.FC = () => {
   const { user } = useAuth();
+  const toast = useToast();
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,15 +79,16 @@ export const SavedView: React.FC = () => {
 
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this saved item?')) return;
     await DatabaseService.deleteDocument(id, user?.uid);
     setDocuments((prev) => prev.filter((d) => d.documentId !== id));
     if (activeDoc?.documentId === id) setActiveDoc(null);
+    toast.info('Document removed from saved items.');
   };
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
+    toast.success('Copied to clipboard!');
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -101,7 +104,6 @@ export const SavedView: React.FC = () => {
       }
     } else {
       handleCopy(doc.documentId, doc.content);
-      alert('Content copied to clipboard!');
     }
   };
 
@@ -116,6 +118,7 @@ export const SavedView: React.FC = () => {
     setDocuments((prev) => prev.map((d) => (d.documentId === updated.documentId ? updated : d)));
     setActiveDoc(updated);
     setIsEditing(false);
+    toast.success('Document changes saved!');
   };
 
   // Filter & sort

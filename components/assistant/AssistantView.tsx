@@ -17,6 +17,7 @@ import { useAuth } from '@/services/authContext';
 import { ChatMessage, ConversationItem } from '@/types';
 import { DatabaseService } from '@/services/databaseService';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
+import { useToast } from '@/components/common/ToastProvider';
 
 interface AssistantViewProps {
   initialQuery?: string;
@@ -28,6 +29,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   onClearInitialQuery,
 }) => {
   const { user, userProfile, recordUsage } = useAuth();
+  const toast = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -130,6 +132,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
+    toast.success('Response copied to clipboard!');
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -143,10 +146,11 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
       } catch (e) {
         // User cancelled or not supported
         navigator.clipboard.writeText(text);
+        toast.info('Copied text for sharing.');
       }
     } else {
       navigator.clipboard.writeText(text);
-      alert('Copied to clipboard for sharing!');
+      toast.success('Copied to clipboard for sharing!');
     }
   };
 
@@ -163,10 +167,11 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
       };
       await DatabaseService.saveDocument(docItem);
       setSavedId(msg.id);
+      toast.success('Saved to your library!');
       setTimeout(() => setSavedId(null), 2500);
     } catch (e) {
       console.error(e);
-      alert('Could not save document right now.');
+      toast.error('Could not save document right now.');
     }
   };
 

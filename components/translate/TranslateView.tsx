@@ -15,9 +15,11 @@ import { useAuth } from '@/services/authContext';
 import { SUPPORTED_LANGUAGES } from '@/config/languages';
 import { DatabaseService } from '@/services/databaseService';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
+import { useToast } from '@/components/common/ToastProvider';
 
 export const TranslateView: React.FC = () => {
   const { user, userProfile, recordUsage } = useAuth();
+  const toast = useToast();
 
   const [fromLang, setFromLang] = useState('en');
   const [toLang, setToLang] = useState('lg');
@@ -64,9 +66,10 @@ export const TranslateView: React.FC = () => {
       if (!res.ok) throw new Error(data.error);
 
       setTranslatedText(data.translation);
+      toast.success('Translation ready!');
     } catch (e: any) {
       console.error(e);
-      alert(e.message || 'Translation failed.');
+      toast.error(e.message || 'Translation failed.');
     } finally {
       setLoading(false);
     }
@@ -75,6 +78,7 @@ export const TranslateView: React.FC = () => {
   const handleCopy = () => {
     navigator.clipboard.writeText(translatedText);
     setCopied(true);
+    toast.success('Translation copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -90,7 +94,6 @@ export const TranslateView: React.FC = () => {
       }
     } else {
       handleCopy();
-      alert('Translation copied to clipboard!');
     }
   };
 
@@ -107,10 +110,11 @@ export const TranslateView: React.FC = () => {
       };
       await DatabaseService.saveDocument(docItem);
       setSaved(true);
+      toast.success('Translation saved to your library!');
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       console.error(e);
-      alert('Could not save translation.');
+      toast.error('Could not save translation.');
     }
   };
 

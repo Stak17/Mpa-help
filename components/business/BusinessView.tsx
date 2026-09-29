@@ -19,9 +19,11 @@ import { useAuth } from '@/services/authContext';
 import { BusinessProfileItem } from '@/types';
 import { DatabaseService } from '@/services/databaseService';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
+import { useToast } from '@/components/common/ToastProvider';
 
 export const BusinessView: React.FC = () => {
   const { user, userProfile, recordUsage } = useAuth();
+  const toast = useToast();
 
   const businessCategories = [
     'Retail & Duka',
@@ -116,9 +118,10 @@ export const BusinessView: React.FC = () => {
 
       setGeneratedResult(data.content);
       setIsEditing(false);
+      toast.success('Marketing content generated!');
     } catch (e: any) {
       console.error(e);
-      alert('Could not generate marketing content. Please try again.');
+      toast.error('Could not generate marketing content. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -138,10 +141,11 @@ export const BusinessView: React.FC = () => {
       };
       await DatabaseService.saveDocument(docItem);
       setSaved(true);
+      toast.success('Saved to your library!');
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       console.error(e);
-      alert('Failed to save to library.');
+      toast.error('Failed to save to library.');
     }
   };
 
@@ -165,6 +169,7 @@ export const BusinessView: React.FC = () => {
     setProfiles(updated);
     setSelectedProfileId(newProfile.businessId);
     await DatabaseService.saveBusinessProfile(newProfile);
+    toast.success('New business profile added!');
 
     // Reset
     setNewBizName('');
@@ -175,18 +180,20 @@ export const BusinessView: React.FC = () => {
 
   const handleDeleteProfile = async (id: string) => {
     if (profiles.length <= 1) {
-      alert('You must keep at least one business profile.');
+      toast.warning('You must keep at least one business profile.');
       return;
     }
     const updated = profiles.filter((p) => p.businessId !== id);
     setProfiles(updated);
     setSelectedProfileId(updated[0].businessId);
     await DatabaseService.deleteBusinessProfile(id, user?.uid);
+    toast.info('Business profile removed.');
   };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedResult);
     setCopied(true);
+    toast.success('Advert copied to clipboard! Ready to paste into WhatsApp.');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -202,7 +209,6 @@ export const BusinessView: React.FC = () => {
       }
     } else {
       handleCopy();
-      alert('Advert copied to clipboard! Ready to paste into WhatsApp.');
     }
   };
 
