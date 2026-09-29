@@ -1,0 +1,185 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with plan, settings, and usage limits",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 120 },
+        "email": { "type": "string", "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "language": { "type": "string", "maxLength": 20 },
+        "plan": { "type": "string", "enum": ["free", "plus", "business"] },
+        "monthlyAiUsage": { "type": "integer" },
+        "usageResetDate": { "type": "string", "maxLength": 40 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email", "plan", "monthlyAiUsage", "createdAt", "updatedAt"]
+    },
+    "Conversation": {
+      "title": "Chat Conversation",
+      "description": "Saved conversation with Mpa Help assistant",
+      "type": "object",
+      "properties": {
+        "conversationId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "maxLength": 50 },
+        "messages": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["conversationId", "userId", "title", "createdAt", "updatedAt"]
+    },
+    "Document": {
+      "title": "Generated Document",
+      "description": "Generated letter, CV, cover letter, or message",
+      "type": "object",
+      "properties": {
+        "documentId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "maxLength": 50 },
+        "title": { "type": "string", "maxLength": 200 },
+        "content": { "type": "string", "maxLength": 50000 },
+        "metadata": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["documentId", "userId", "type", "title", "content", "createdAt", "updatedAt"]
+    },
+    "Expense": {
+      "title": "Expense Entry",
+      "description": "User budgeting expense entry",
+      "type": "object",
+      "properties": {
+        "expenseId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 80 },
+        "amount": { "type": "number" },
+        "description": { "type": "string", "maxLength": 250 },
+        "date": { "type": "string", "maxLength": 30 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["expenseId", "userId", "category", "amount", "date", "createdAt", "updatedAt"]
+    },
+    "BusinessProfile": {
+      "title": "Business Profile",
+      "description": "Small business profile for generating marketing materials",
+      "type": "object",
+      "properties": {
+        "businessId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "businessName": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 100 },
+        "location": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["businessId", "userId", "businessName", "category", "location", "createdAt", "updatedAt"]
+    },
+    "Subscription": {
+      "title": "Subscription Record",
+      "description": "User subscription status and details",
+      "type": "object",
+      "properties": {
+        "subscriptionId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "plan": { "type": "string", "enum": ["free", "plus", "business"] },
+        "status": { "type": "string", "enum": ["active", "cancelled", "expired", "pending"] },
+        "provider": { "type": "string", "maxLength": 50 },
+        "paymentReference": { "type": "string", "maxLength": 150 },
+        "startDate": { "type": "string", "maxLength": 40 },
+        "expiryDate": { "type": "string", "maxLength": 40 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["subscriptionId", "userId", "plan", "status", "createdAt", "updatedAt"]
+    },
+    "Feedback": {
+      "title": "User Feedback",
+      "description": "Helpful/Not helpful feedback on features",
+      "type": "object",
+      "properties": {
+        "feedbackId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["helpful", "not_helpful", "suggestion", "bug"] },
+        "message": { "type": "string", "maxLength": 1000 },
+        "feature": { "type": "string", "maxLength": 100 },
+        "rating": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["feedbackId", "userId", "type", "feature", "createdAt"]
+    },
+    "UsageEvent": {
+      "title": "AI Usage Event",
+      "description": "Telemetry event for AI requests and cost tracking",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "feature": { "type": "string", "maxLength": 80 },
+        "model": { "type": "string", "maxLength": 80 },
+        "inputTokens": { "type": "integer" },
+        "outputTokens": { "type": "integer" },
+        "estimatedCost": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["eventId", "userId", "feature", "createdAt"]
+    },
+    "Admin": {
+      "title": "Admin Role",
+      "description": "Authorized administrator user mapping",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile with plan, usage and language preference"
+    },
+    "/conversations/{conversationId}": {
+      "schema": { "$ref": "#/entities/Conversation" },
+      "description": "User AI chat conversations"
+    },
+    "/documents/{documentId}": {
+      "schema": { "$ref": "#/entities/Document" },
+      "description": "Saved documents, CVs, letters and messages"
+    },
+    "/expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/Expense" },
+      "description": "Budget expense records"
+    },
+    "/businessProfiles/{businessId}": {
+      "schema": { "$ref": "#/entities/BusinessProfile" },
+      "description": "Small business profiles"
+    },
+    "/subscriptions/{subscriptionId}": {
+      "schema": { "$ref": "#/entities/Subscription" },
+      "description": "User subscription status"
+    },
+    "/feedback/{feedbackId}": {
+      "schema": { "$ref": "#/entities/Feedback" },
+      "description": "User feedback submissions"
+    },
+    "/usageEvents/{eventId}": {
+      "schema": { "$ref": "#/entities/UsageEvent" },
+      "description": "Usage events for AI metrics"
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Admin access control collection"
+    }
+  }
+}

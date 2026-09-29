@@ -1,0 +1,181 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email == 'travourstak22@gmail.com' && request.auth.token.email_verified == true)
+      );
+    }
+
+    // Users Collection
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'email', 'plan', 'monthlyAiUsage']) &&
+        data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid &&
+        data.email is string && data.email.size() <= 120 &&
+        data.plan in ['free', 'plus', 'business'] &&
+        data.monthlyAiUsage is int && data.monthlyAiUsage >= 0;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().userId == userId;
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'language', 'plan', 'monthlyAiUsage', 'usageResetDate', 'updatedAt']);
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Conversations Collection
+    function isValidConversation(data) {
+      return data.keys().hasAll(['conversationId', 'userId', 'title']) &&
+        data.conversationId is string && data.conversationId.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.title is string && data.title.size() <= 200;
+    }
+
+    match /conversations/{conversationId} {
+      allow get: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(conversationId) && isValidConversation(incoming()) && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidConversation(incoming()) && incoming().userId == existing().userId &&
+        (existing().userId == request.auth.uid || isAdmin()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'category', 'messages', 'updatedAt']);
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Documents Collection
+    function isValidDocument(data) {
+      return data.keys().hasAll(['documentId', 'userId', 'type', 'title', 'content']) &&
+        data.documentId is string && data.documentId.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.type is string && data.type.size() <= 50 &&
+        data.title is string && data.title.size() <= 200 &&
+        data.content is string && data.content.size() <= 50000;
+    }
+
+    match /documents/{documentId} {
+      allow get: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(documentId) && isValidDocument(incoming()) && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidDocument(incoming()) && incoming().userId == existing().userId &&
+        (existing().userId == request.auth.uid || isAdmin()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'type', 'content', 'metadata', 'updatedAt']);
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Expenses Collection
+    function isValidExpense(data) {
+      return data.keys().hasAll(['expenseId', 'userId', 'category', 'amount', 'date']) &&
+        data.expenseId is string && data.expenseId.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.category is string && data.category.size() <= 80 &&
+        data.amount is number &&
+        data.date is string && data.date.size() <= 30;
+    }
+
+    match /expenses/{expenseId} {
+      allow get: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(expenseId) && isValidExpense(incoming()) && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidExpense(incoming()) && incoming().userId == existing().userId &&
+        (existing().userId == request.auth.uid || isAdmin()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['category', 'amount', 'description', 'date', 'updatedAt']);
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Business Profiles Collection
+    function isValidBusinessProfile(data) {
+      return data.keys().hasAll(['businessId', 'userId', 'businessName', 'category', 'location']) &&
+        data.businessId is string && data.businessId.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.businessName is string && data.businessName.size() <= 150 &&
+        data.category is string && data.category.size() <= 100 &&
+        data.location is string && data.location.size() <= 150;
+    }
+
+    match /businessProfiles/{businessId} {
+      allow get: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(businessId) && isValidBusinessProfile(incoming()) && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidBusinessProfile(incoming()) && incoming().userId == existing().userId &&
+        (existing().userId == request.auth.uid || isAdmin()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['businessName', 'category', 'location', 'description', 'phone', 'updatedAt']);
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Subscriptions Collection
+    function isValidSubscription(data) {
+      return data.keys().hasAll(['subscriptionId', 'userId', 'plan', 'status']) &&
+        data.subscriptionId is string && data.subscriptionId.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.plan in ['free', 'plus', 'business'] &&
+        data.status in ['active', 'cancelled', 'expired', 'pending'];
+    }
+
+    match /subscriptions/{subscriptionId} {
+      allow get: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if (isSignedIn() && incoming().userId == request.auth.uid && isValidSubscription(incoming())) || isAdmin();
+      allow update: if (isSignedIn() && existing().userId == request.auth.uid && isValidSubscription(incoming())) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Feedback Collection
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['feedbackId', 'userId', 'type', 'feature']) &&
+        data.feedbackId is string && data.feedbackId.size() <= 128 &&
+        data.type in ['helpful', 'not_helpful', 'suggestion', 'bug'] &&
+        data.feature is string && data.feature.size() <= 100;
+    }
+
+    match /feedback/{feedbackId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isValidId(feedbackId) && isValidFeedback(incoming());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Usage Events Collection
+    match /usageEvents/{eventId} {
+      allow get, list: if isAdmin();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Admins Collection
+    match /admins/{userId} {
+      allow get, list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

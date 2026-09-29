@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="mpa_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="gold_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded squircle with safe margin -->
+  <rect width="512" height="512" rx="112" fill="url(#mpa_grad)"/>
+  
+  <!-- Uganda flag accent stripes at top subtle -->
+  <rect x="180" y="56" width="152" height="12" rx="6" fill="#111827" />
+  <rect x="196" y="72" width="120" height="10" rx="5" fill="#FBBF24" />
+  <rect x="212" y="86" width="88" height="8" rx="4" fill="#DC2626" />
+
+  <!-- Shield / Crest / Letter M and Heart Hands -->
+  <g transform="translate(100, 110)">
+    <!-- Central Shield & Helping Hand Motif -->
+    <path d="M156 40 C70 40, 20 100, 20 190 C20 280, 120 340, 156 360 C192 340, 292 280, 292 190 C292 100, 242 40, 156 40 Z" fill="#ffffff" fill-opacity="0.95"/>
+    
+    <!-- Stylized "M" with Helping Hand & Sun Rays -->
+    <path d="M76 250 L76 130 L116 195 L156 130 L196 195 L236 130 L236 250" fill="none" stroke="url(#mpa_grad)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Spark / Rising Sun dot -->
+    <circle cx="156" cy="95" r="18" fill="url(#gold_grad)"/>
+  </g>
+</svg>

@@ -1,0 +1,7 @@
+{
+  "name": "Mpa Help",
+  "description": "Simple help for everyday life. AI-powered practical assistant for writing, money, job search, business, and translation for Ugandan users.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
