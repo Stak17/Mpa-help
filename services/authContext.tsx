@@ -5,6 +5,8 @@ import {
   User,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as fbSignOut,
   onAuthStateChanged,
   deleteUser,
@@ -21,7 +23,7 @@ interface AuthContextType {
   loading: boolean;
   isGuest: boolean;
   isAdmin: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (forceRedirect?: boolean) => Promise<void>;
   signOutUser: () => Promise<void>;
   updateLanguage: (lang: string) => Promise<void>;
   updateUserPlan: (newPlan: PlanType) => Promise<void>;
@@ -33,6 +35,7 @@ interface AuthContextType {
   showAuthModal: boolean;
   setShowAuthModal: (show: boolean) => void;
 }
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -86,6 +89,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // Check if returning from a mobile or full-page Google sign-in redirect
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setUser(result.user);
+          setShowAuthModal(false);
+        }
+      })
+      .catch((err) => {
+        if (err && err.code !== 'auth/null-user') {
+          console.warn('Redirect sign-in notice:', err.code, err.message);
+        }
+      });
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setLoading(true);
       if (currentUser) {
@@ -96,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!profile) {
             profile = {
               userId: currentUser.uid,
-              name: currentUser.displayName || 'Ugandan User',
+              name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Ugandan User',
               email: currentUser.email || '',
               language: 'en',
               plan: 'free',
@@ -106,12 +123,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               updatedAt: new Date().toISOString(),
               isAdmin: adminCheck,
             };
-            await DatabaseService.saveUserProfile(profile);
+            try {
+              await DatabaseService.saveUserProfile(profile);
+            } catch (saveErr) {
+              console.warn('Initial profile creation notice:', saveErr);
+            }
           } else {
-            // Keep admin flag up to date
+            // Keep admin flag up to date if changed
             if (profile.isAdmin !== adminCheck) {
               profile.isAdmin = adminCheck;
-              await DatabaseService.saveUserProfile(profile);
+              try {
+                await DatabaseService.saveUserProfile(profile);
+              } catch (adminSaveErr) {
+                console.warn('Admin profile sync note:', adminSaveErr);
+              }
             }
           }
           setUserProfile(profile);
@@ -119,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.warn('Error loading user profile:', e);
           setUserProfile({
             userId: currentUser.uid,
-            name: currentUser.displayName || 'User',
+            name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
             email: currentUser.email || '',
             language: 'en',
             plan: 'free',
@@ -140,17 +165,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (forceRedirect: boolean = false) => {
+    const provider = new GoogleAuthProvider();
+    // Ensures Google shows the Gmail account chooser if multiple accounts exist
+    provider.setCustomParameters({
+      prompt: 'select_account',
+    });
+    provider.addScope('email');
+    provider.addScope('profile');
+
+    const isMobile =
+      typeof window !== 'undefined' &&
+      /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+
+    // If explicitly requested or on mobile where popups are blocked by Chrome, use redirect
+    if (forceRedirect) {
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+
     try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, provider);
       setShowAuthModal(false);
-    } catch (error) {
-      console.error('Sign-in error:', error);
-      throw error;
+    } catch (popupError: any) {
+      const code = popupError?.code || '';
+      console.warn('Google Popup sign-in error:', code, popupError);
+
+      // If browser blocked the popup or it is unsupported, automatically fallback to redirect
+      if (
+        code === 'auth/popup-blocked' ||
+        code === 'auth/cancelled-popup-request' ||
+        code === 'auth/operation-not-supported-in-this-environment' ||
+        isMobile
+      ) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+
+      throw popupError;
     }
   };
+
 
   const signOutUser = async () => {
     try {

@@ -9,8 +9,9 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 
-// Connection test as required by skill guidelines
+// Use device language for auth prompts and test connectivity
 if (typeof window !== 'undefined') {
+  auth.useDeviceLanguage();
   (async function testConnection() {
     try {
       await getDocFromServer(doc(db, 'test', 'connection'));
