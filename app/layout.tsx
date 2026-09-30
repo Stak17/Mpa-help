@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/services/authContext';
+import { I18nProvider } from '@/services/i18nContext';
 import { ToastProvider } from '@/components/common/ToastProvider';
 
 export const viewport: Viewport = {
@@ -51,7 +52,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
       >
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <I18nProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </I18nProvider>
         </AuthProvider>
       </body>
     </html>

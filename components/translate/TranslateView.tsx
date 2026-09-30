@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Languages,
   ArrowRightLeft,
@@ -9,25 +9,33 @@ import {
   Bookmark,
   Check,
   Sparkles,
-  Info,
 } from 'lucide-react';
 import { useAuth } from '@/services/authContext';
+import { useTranslation } from '@/services/i18nContext';
 import { SUPPORTED_LANGUAGES } from '@/config/languages';
 import { DatabaseService } from '@/services/databaseService';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
 import { useToast } from '@/components/common/ToastProvider';
 
 export const TranslateView: React.FC = () => {
-  const { user, userProfile, recordUsage } = useAuth();
+  const { user, userProfile, effectiveUserId, recordUsage } = useAuth();
+  const { t, language } = useTranslation();
   const toast = useToast();
 
   const [fromLang, setFromLang] = useState('en');
-  const [toLang, setToLang] = useState('lg');
+  const [toLang, setToLang] = useState(language === 'en' ? 'lg' : language);
   const [sourceText, setSourceText] = useState('');
   const [translatedText, setTranslatedText] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Sync default target language when global app language changes
+  useEffect(() => {
+    if (language !== 'en') {
+      setToLang(language);
+    }
+  }, [language]);
 
   const samplePhrases = [
     'Good morning, how are you today?',
@@ -66,7 +74,7 @@ export const TranslateView: React.FC = () => {
       if (!res.ok) throw new Error(data.error);
 
       setTranslatedText(data.translation);
-      toast.success('Translation ready!');
+      toast.success(t('transSaved', 'Translation ready!'));
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || 'Translation failed.');
@@ -78,7 +86,7 @@ export const TranslateView: React.FC = () => {
   const handleCopy = () => {
     navigator.clipboard.writeText(translatedText);
     setCopied(true);
-    toast.success('Translation copied to clipboard!');
+    toast.success(t('transCopied', 'Translation copied to clipboard!'));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -101,7 +109,7 @@ export const TranslateView: React.FC = () => {
     try {
       const docItem = {
         documentId: 'tr_' + Date.now(),
-        userId: user?.uid || userProfile?.userId || 'guest',
+        userId: effectiveUserId,
         type: 'translation',
         title: `Translation: ${sourceText.slice(0, 30)}...`,
         content: `Original (${fromLang}):\n${sourceText}\n\nTranslation (${toLang}):\n${translatedText}`,
@@ -110,7 +118,7 @@ export const TranslateView: React.FC = () => {
       };
       await DatabaseService.saveDocument(docItem);
       setSaved(true);
-      toast.success('Translation saved to your library!');
+      toast.success(t('transSaved', 'Translation saved to your library!'));
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
       console.error(e);
@@ -119,7 +127,7 @@ export const TranslateView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
       {/* Header */}
       <div className="flex items-center gap-2 pb-3 border-b border-stone-200 dark:border-stone-800">
         <div className="p-2 rounded-xl bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-400">
@@ -127,10 +135,10 @@ export const TranslateView: React.FC = () => {
         </div>
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-stone-900 dark:text-white">
-            Ugandan Language Translation
+            {t('transTitle', 'Language Translation')}
           </h2>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            Natural translations between English and Luganda (Oluganda)
+            {t('transSubtitle', 'Translate accurately between English and all Ugandan languages with cultural context.')}
           </p>
         </div>
       </div>
@@ -140,20 +148,20 @@ export const TranslateView: React.FC = () => {
         <select
           value={fromLang}
           onChange={(e) => setFromLang(e.target.value)}
-          className="text-xs sm:text-sm font-semibold bg-stone-50 dark:bg-stone-800 p-2 rounded-xl border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 flex-1"
+          className="text-xs sm:text-sm font-semibold bg-stone-50 dark:bg-stone-800 p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 flex-1 cursor-pointer"
         >
           {SUPPORTED_LANGUAGES.map((l) => (
-            <option key={l.code} value={l.code} disabled={!l.isAvailable}>
-              {l.name} ({l.nativeName}) {!l.isAvailable ? '- Soon' : ''}
+            <option key={l.code} value={l.code}>
+              {l.name} ({l.nativeName})
             </option>
           ))}
         </select>
 
         <button
           onClick={handleSwap}
-          className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition"
-          title="Swap languages"
-          aria-label="Swap languages"
+          className="p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition cursor-pointer"
+          title={t('transSwap', 'Swap languages')}
+          aria-label={t('transSwap', 'Swap languages')}
         >
           <ArrowRightLeft className="w-4 h-4" />
         </button>
@@ -161,11 +169,11 @@ export const TranslateView: React.FC = () => {
         <select
           value={toLang}
           onChange={(e) => setToLang(e.target.value)}
-          className="text-xs sm:text-sm font-semibold bg-stone-50 dark:bg-stone-800 p-2 rounded-xl border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 flex-1"
+          className="text-xs sm:text-sm font-semibold bg-stone-50 dark:bg-stone-800 p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 flex-1 cursor-pointer"
         >
           {SUPPORTED_LANGUAGES.map((l) => (
-            <option key={l.code} value={l.code} disabled={!l.isAvailable}>
-              {l.name} ({l.nativeName}) {!l.isAvailable ? '- Soon' : ''}
+            <option key={l.code} value={l.code}>
+              {l.name} ({l.nativeName})
             </option>
           ))}
         </select>
@@ -176,11 +184,11 @@ export const TranslateView: React.FC = () => {
         {/* Source Text */}
         <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs flex flex-col min-h-[260px]">
           <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-800 text-xs font-bold text-stone-500 uppercase tracking-wider">
-            <span>Enter Text</span>
+            <span>{t('transFrom', 'From Language')}</span>
             {sourceText && (
               <button
                 onClick={() => setSourceText('')}
-                className="text-stone-400 hover:text-stone-600 text-xs font-normal"
+                className="text-stone-400 hover:text-stone-600 text-xs font-normal cursor-pointer"
               >
                 Clear
               </button>
@@ -189,105 +197,113 @@ export const TranslateView: React.FC = () => {
           <textarea
             value={sourceText}
             onChange={(e) => setSourceText(e.target.value)}
-            placeholder="Type or paste text to translate..."
+            placeholder={t('transPlaceholder', 'Type or paste text to translate here...')}
             className="w-full flex-1 mt-2 p-1 text-xs sm:text-sm bg-transparent text-stone-900 dark:text-stone-100 focus:outline-none resize-none leading-relaxed"
           />
           <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex justify-end">
             <button
               onClick={handleTranslate}
               disabled={loading || !sourceText.trim()}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               {loading ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Translating...</span>
+                  <span>{t('transLoading', 'Translating...')}</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Translate</span>
+                  <span>{t('transButton', 'Translate')}</span>
                 </>
               )}
             </button>
           </div>
         </div>
 
-        {/* Translated Result */}
+        {/* Translated Result Output */}
         <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs flex flex-col min-h-[260px]">
           <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-800 text-xs font-bold text-stone-500 uppercase tracking-wider">
-            <span>Translation</span>
+            <span>{t('transResult', 'Translation Result')}</span>
             {translatedText && (
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleCopy}
-                  className="text-stone-600 dark:text-stone-300 hover:text-emerald-600 flex items-center gap-1 text-xs font-medium"
+                  className="p-1 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition cursor-pointer"
+                  title={t('transCopy', 'Copy')}
+                  aria-label={t('transCopy', 'Copy')}
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? 'Copied' : 'Copy'}</span>
+                  {copied ? (
+                    <Check className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
                 </button>
                 <button
                   onClick={handleShare}
-                  className="text-stone-600 dark:text-stone-300 hover:text-emerald-600 flex items-center gap-1 text-xs font-medium"
+                  className="p-1 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition cursor-pointer"
+                  title={t('transShare', 'Share')}
+                  aria-label={t('transShare', 'Share')}
                 >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>Share</span>
+                  <Share2 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={handleSave}
-                  className="text-emerald-600 hover:underline flex items-center gap-1 text-xs font-semibold"
+                  className="p-1 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition cursor-pointer"
+                  title={t('transSave', 'Save to Library')}
+                  aria-label={t('transSave', 'Save to Library')}
                 >
-                  {saved ? <Check className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
-                  <span>{saved ? 'Saved' : 'Save'}</span>
+                  {saved ? (
+                    <Check className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <Bookmark className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             )}
           </div>
 
-          <div className="flex-1 mt-2 p-1 text-xs sm:text-sm text-stone-800 dark:text-stone-200 whitespace-pre-wrap leading-relaxed">
-            {translatedText || (
-              <span className="text-stone-400 italic">
-                Translation will appear here...
-              </span>
+          <div className="flex-1 mt-2 overflow-y-auto">
+            {translatedText ? (
+              <div className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed text-stone-800 dark:text-stone-200">
+                {translatedText}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-xs text-stone-400 italic">
+                {loading
+                  ? t('transLoading', 'Translating...')
+                  : t('transResult', 'Your translation will appear here...')}
+              </div>
             )}
           </div>
 
           {translatedText && (
-            <div className="pt-2 border-t border-stone-100 dark:border-stone-800">
-              <HelpfulFeedback featureName="Translate" />
+            <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex justify-between items-center text-[11px] text-stone-400">
+              <span>{t('ugandaBadge', 'Mpa Help Language Engine')}</span>
+              <HelpfulFeedback featureName="Ugandan Translation" />
             </div>
           )}
         </div>
       </div>
 
-      {/* Everyday phrases chips */}
-      <div className="space-y-2">
-        <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">
-          Try everyday phrases:
-        </span>
+      {/* Sample Ugandan Phrases */}
+      <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs space-y-2">
+        <h4 className="text-xs font-bold text-stone-600 dark:text-stone-300">
+          {t('transSampleTitle', 'Quick phrases to test:')}
+        </h4>
         <div className="flex flex-wrap gap-2">
           {samplePhrases.map((phrase, idx) => (
             <button
               key={idx}
               onClick={() => {
                 setSourceText(phrase);
-                setFromLang('en');
-                setToLang('lg');
               }}
-              className="text-left text-xs bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700/80 text-stone-700 dark:text-stone-300 px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 transition"
+              className="text-xs bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-stone-300 px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 transition text-left cursor-pointer"
             >
-              {phrase}
+              &quot;{phrase}&quot;
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Cultural nuance note */}
-      <div className="p-3 bg-teal-50 dark:bg-teal-950/40 rounded-xl border border-teal-200 dark:border-teal-900 text-xs text-teal-800 dark:text-teal-300 flex items-start gap-2">
-        <Info className="w-4 h-4 shrink-0 mt-0.5" />
-        <span>
-          Ugandan language tip: Luganda has polite prefixes depending on whether you are speaking to an individual, elder, or group. Mpa Help provides natural context and formal/casual variations.
-        </span>
       </div>
     </div>
   );

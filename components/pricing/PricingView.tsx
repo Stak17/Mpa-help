@@ -5,9 +5,11 @@ import { Check, Zap, Sparkles, Smartphone, HelpCircle } from 'lucide-react';
 import { PLANS, formatUGX } from '@/config/plans';
 import { useAuth } from '@/services/authContext';
 import { PlanType } from '@/types';
+import { useTranslation } from '@/services/i18nContext';
 
 export const PricingView: React.FC = () => {
   const { userProfile, setShowUpgradeModal } = useAuth();
+  const { t } = useTranslation();
   const currentPlan = userProfile?.plan || 'free';
 
   const planKeys: PlanType[] = ['free', 'plus', 'business'];
@@ -18,13 +20,13 @@ export const PricingView: React.FC = () => {
       <div className="text-center pt-2">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-semibold mb-2">
           <span>🇺🇬</span>
-          <span>Simple, Honest Pricing in UGX</span>
+          <span>{t('pricingBadge', 'Simple, Honest Pricing in UGX')}</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 dark:text-white">
-          Choose the right plan for your everyday life
+          {t('pricingTitle', 'Choose the right plan for your everyday life')}
         </h2>
         <p className="mt-2 text-xs sm:text-sm text-stone-500 dark:text-stone-400 max-w-lg mx-auto">
-          Start for free, or upgrade with Mobile Money (MTN MoMo & Airtel Money) for higher monthly AI limits.
+          {t('pricingSubtitle', 'Start for free, or upgrade with Mobile Money (MTN MoMo & Airtel Money) for higher monthly AI limits.')}
         </p>
       </div>
 

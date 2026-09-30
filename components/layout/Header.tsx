@@ -13,8 +13,11 @@ import {
   Moon,
   Sun,
 } from 'lucide-react';
-import { SUPPORTED_LANGUAGES } from '@/config/languages';
+import { SUPPORTED_LANGUAGES, getLanguageName } from '@/config/languages';
 import { useIsMounted } from '@/hooks/useIsMounted';
+import { useTranslation } from '@/services/i18nContext';
+import { LanguageModal } from '@/components/common/LanguageModal';
+import { useToast } from '@/components/common/ToastProvider';
 
 interface HeaderProps {
   activeTab: string;
@@ -35,10 +38,19 @@ export const Header: React.FC<HeaderProps> = ({
     signOutUser,
     setShowAuthModal,
     setShowUpgradeModal,
-    updateLanguage,
     checkCanUseAI,
     isAdmin,
   } = useAuth();
+
+  const { language, setLanguage, t, languageOption } = useTranslation();
+  const [showLangModal, setShowLangModal] = React.useState(false);
+  const toast = useToast();
+
+  const handleLanguageChange = async (newLang: string) => {
+    await setLanguage(newLang);
+    const langName = getLanguageName(newLang);
+    toast.success(`${langName}: ${t('langSwitched', 'Language switched successfully')}`);
+  };
 
   const usageInfo = checkCanUseAI();
   const currentPlan = PLANS[userProfile?.plan || 'free'];
@@ -82,33 +94,40 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Plan & Usage badge (large screens only) */}
           <button
             onClick={() => setShowUpgradeModal(true)}
-            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 transition shadow-2xs shrink-0"
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 transition shadow-2xs shrink-0 cursor-pointer"
             title="Click to view plans & usage"
           >
             <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
             <span>{currentPlan.name}</span>
             <span className="text-stone-400 dark:text-stone-500">|</span>
             <span className="text-[11px] font-normal">
-              {usageInfo.remaining} left
+              {usageInfo.remaining} {t('left', 'left')}
             </span>
           </button>
 
-          {/* Language Selector */}
-          <div className="relative shrink-0">
+          {/* Language Selector: Dual Native Select + Modal Button */}
+          <div className="relative shrink-0 flex items-center">
             <select
-              value={userProfile?.language || 'en'}
-              onChange={(e) => updateLanguage(e.target.value)}
-              className="appearance-none bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-xs font-semibold pl-5 pr-1.5 py-1.5 rounded-xl border border-transparent hover:border-stone-300 dark:hover:border-stone-700 focus:outline-none transition cursor-pointer max-w-[76px] sm:max-w-none"
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="appearance-none bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-xs font-semibold pl-6 pr-2 py-1.5 rounded-xl border border-transparent hover:border-stone-300 dark:hover:border-stone-700 focus:outline-none transition cursor-pointer max-w-[95px] sm:max-w-none shadow-2xs"
               aria-label="Select language"
               title="Change Language"
             >
               {SUPPORTED_LANGUAGES.map((lang) => (
-                <option key={lang.code} value={lang.code} disabled={!lang.isAvailable}>
-                  {lang.name} {!lang.isAvailable ? '(soon)' : ''}
+                <option key={lang.code} value={lang.code}>
+                  {lang.name} {lang.nativeName !== lang.name ? `(${lang.nativeName})` : ''}
                 </option>
               ))}
             </select>
-            <Globe className="w-3 h-3 text-stone-400 absolute left-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <button
+              type="button"
+              onClick={() => setShowLangModal(true)}
+              className="absolute left-1.5 top-1/2 -translate-y-1/2 text-emerald-600 dark:text-emerald-400 hover:scale-110 transition cursor-pointer"
+              title="View all language dialects"
+            >
+              <Globe className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           {/* PWA Install Button */}
@@ -117,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Dark Mode Toggle */}
           <button
             onClick={toggleDarkMode}
-            className="p-1.5 rounded-xl text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition shrink-0"
+            className="p-1.5 rounded-xl text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition shrink-0 cursor-pointer"
             aria-label="Toggle dark mode"
             title="Toggle theme"
           >
@@ -128,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
           {isAdmin && (
             <button
               onClick={() => setActiveTab('admin')}
-              className={`p-1.5 rounded-xl transition shrink-0 ${
+              className={`p-1.5 rounded-xl transition shrink-0 cursor-pointer ${
                 activeTab === 'admin'
                   ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300'
                   : 'text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800'
@@ -146,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Account profile link */}
               <button
                 onClick={() => setActiveTab('account')}
-                className="flex items-center gap-1.5 p-1 sm:px-2 sm:py-1 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 transition text-xs font-medium"
+                className="flex items-center gap-1.5 p-1 sm:px-2 sm:py-1 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 transition text-xs font-medium cursor-pointer"
                 title="Account Settings"
                 aria-label="Account Settings"
               >
@@ -154,33 +173,34 @@ export const Header: React.FC<HeaderProps> = ({
                   {userProfile?.name?.charAt(0) || 'U'}
                 </div>
                 <span className="hidden md:inline max-w-[70px] truncate font-medium">
-                  {userProfile?.name?.split(' ')[0] || 'Account'}
+                  {userProfile?.name?.split(' ')[0] || t('navAccount', 'Account')}
                 </span>
               </button>
 
               {/* Sign Out Button */}
               <button
                 onClick={handleSignOut}
-                className="inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:border-red-800 text-stone-600 hover:text-red-600 dark:text-stone-400 dark:hover:text-red-400 text-xs font-semibold transition shrink-0"
-                title="Sign out of Mpa Help"
+                className="inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:border-red-800 text-stone-600 hover:text-red-600 dark:text-stone-400 dark:hover:text-red-400 text-xs font-semibold transition shrink-0 cursor-pointer"
+                title={t('signOut', 'Sign Out')}
                 aria-label="Sign Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Sign Out</span>
+                <span className="hidden sm:inline">{t('signOut', 'Sign Out')}</span>
               </button>
             </div>
           ) : (
             <button
               onClick={() => setShowAuthModal(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs shrink-0"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs shrink-0 cursor-pointer"
               title="Sign in with Google"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In</span>
+              <span>{t('signIn', 'Sign In')}</span>
             </button>
           )}
         </div>
       </div>
+      <LanguageModal isOpen={showLangModal} onClose={() => setShowLangModal(false)} />
     </header>
   );
 };

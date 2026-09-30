@@ -22,9 +22,11 @@ import { DocumentItem } from '@/types';
 import { DatabaseService } from '@/services/databaseService';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useToast } from '@/components/common/ToastProvider';
+import { useTranslation } from '@/services/i18nContext';
 
 export const SavedView: React.FC = () => {
-  const { user } = useAuth();
+  const { effectiveUserId } = useAuth();
+  const { t } = useTranslation();
   const toast = useToast();
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,7 @@ export const SavedView: React.FC = () => {
   const loadDocs = async () => {
     setLoading(true);
     try {
-      const items = await DatabaseService.getDocuments(user?.uid);
+      const items = await DatabaseService.getDocuments(effectiveUserId);
       setDocuments(items);
     } catch (e) {
       console.error(e);
@@ -61,10 +63,11 @@ export const SavedView: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
-    DatabaseService.getDocuments(user?.uid)
+    setLoading(true);
+    DatabaseService.getDocuments(effectiveUserId)
       .then((items) => {
         if (isMounted) {
-          setDocuments(items);
+          setDocuments(items || []);
           setLoading(false);
         }
       })
@@ -75,11 +78,10 @@ export const SavedView: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [user]);
-
+  }, [effectiveUserId]);
 
   const handleDelete = async (id: string) => {
-    await DatabaseService.deleteDocument(id, user?.uid);
+    await DatabaseService.deleteDocument(id, effectiveUserId);
     setDocuments((prev) => prev.filter((d) => d.documentId !== id));
     if (activeDoc?.documentId === id) setActiveDoc(null);
     toast.info('Document removed from saved items.');
@@ -162,12 +164,12 @@ export const SavedView: React.FC = () => {
   }, [documents, selectedCategory, debouncedQuery, sortBy]);
 
   const categories = [
-    { id: 'all', label: 'All' },
-    { id: 'documents', label: 'Documents' },
-    { id: 'cv', label: 'CVs' },
-    { id: 'business', label: 'Business' },
-    { id: 'translations', label: 'Translations' },
-    { id: 'chats', label: 'Chats' },
+    { id: 'all', label: t('savedFilterAll', 'All') },
+    { id: 'documents', label: t('savedFilterDocs', 'Documents') },
+    { id: 'cv', label: t('savedFilterCv', 'CVs') },
+    { id: 'business', label: t('savedFilterBiz', 'Business') },
+    { id: 'translations', label: t('savedFilterTrans', 'Translations') },
+    { id: 'chats', label: t('savedFilterChat', 'Chats') },
   ];
 
   return (
@@ -180,10 +182,10 @@ export const SavedView: React.FC = () => {
           </div>
           <div>
             <h2 className="text-lg sm:text-xl font-bold text-stone-900 dark:text-white">
-              Saved Content & Library
+              {t('savedTitle', 'Saved Content & Library')}
             </h2>
             <p className="text-xs text-stone-500 dark:text-stone-400">
-              Access your letters, CVs, business advertisements, and translations anytime
+              {t('savedSubtitle', 'Access your letters, CVs, business advertisements, and translations anytime')}
             </p>
           </div>
         </div>
@@ -198,7 +200,7 @@ export const SavedView: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search saved title or content..."
+            placeholder={t('savedSearchPlaceholder', 'Search saved title or content...')}
             className="w-full text-xs sm:text-sm pl-9 pr-3 py-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
@@ -206,16 +208,16 @@ export const SavedView: React.FC = () => {
         {/* Sort selector */}
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs text-stone-500 dark:text-stone-400 font-medium hidden sm:inline">
-            Sort by:
+            {t('savedSortBy', 'Sort by:')}
           </span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="text-xs p-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-stone-700 dark:text-stone-300 focus:outline-none"
+            className="text-xs p-2 rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-stone-700 dark:text-stone-300 focus:outline-none cursor-pointer"
           >
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-            <option value="category">Category</option>
+            <option value="newest">{t('savedSortNewest', 'Newest First')}</option>
+            <option value="oldest">{t('savedSortOldest', 'Oldest First')}</option>
+            <option value="category">{t('savedSortCategory', 'Category')}</option>
           </select>
         </div>
       </div>
@@ -226,7 +228,7 @@ export const SavedView: React.FC = () => {
           <button
             key={c.id}
             onClick={() => setSelectedCategory(c.id)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               selectedCategory === c.id
                 ? 'bg-emerald-600 text-white shadow-2xs'
                 : 'bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-800 hover:bg-stone-50'
@@ -243,8 +245,8 @@ export const SavedView: React.FC = () => {
       ) : filteredDocs.length === 0 ? (
         <EmptyState
           icon={Bookmark}
-          title="You haven't saved anything yet"
-          description="Generate letters, CVs, budgets or translations and tap 'Save' to find them here."
+          title={t('savedEmptyTitle', "You haven't saved anything yet")}
+          description={t('savedEmptyDesc', "Generate letters, CVs, budgets or translations and tap 'Save' to find them here.")}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -279,17 +281,17 @@ export const SavedView: React.FC = () => {
                     setEditContent(doc.content);
                     setIsEditing(false);
                   }}
-                  className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+                  className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Open Full</span>
+                  <span>{t('savedOpenFull', 'Open Full')}</span>
                 </button>
 
                 <div className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                   <button
                     onClick={() => handleCopy(doc.documentId, doc.content)}
-                    className="p-1 hover:text-stone-800 dark:hover:text-stone-200"
-                    title="Copy"
+                    className="p-1 hover:text-stone-800 dark:hover:text-stone-200 cursor-pointer"
+                    title={t('savedCopy', 'Copy')}
                   >
                     {copiedId === doc.documentId ? (
                       <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -299,15 +301,15 @@ export const SavedView: React.FC = () => {
                   </button>
                   <button
                     onClick={() => handleShare(doc)}
-                    className="p-1 hover:text-stone-800 dark:hover:text-stone-200"
-                    title="Share"
+                    className="p-1 hover:text-stone-800 dark:hover:text-stone-200 cursor-pointer"
+                    title={t('savedShare', 'Share')}
                   >
                     <Share2 className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => handleDelete(doc.documentId)}
-                    className="p-1 hover:text-red-500"
-                    title="Delete"
+                    className="p-1 hover:text-red-500 cursor-pointer"
+                    title={t('delete', 'Delete')}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -328,10 +330,10 @@ export const SavedView: React.FC = () => {
               </h3>
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold hover:underline"
+                className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold hover:underline cursor-pointer"
               >
                 <Edit3 className="w-3.5 h-3.5" />
-                <span>{isEditing ? 'Cancel Edit' : 'Edit Text'}</span>
+                <span>{isEditing ? t('savedCancelEdit', 'Cancel Edit') : t('savedEdit', 'Edit Text')}</span>
               </button>
             </div>
 
@@ -353,17 +355,17 @@ export const SavedView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleCopy(activeDoc.documentId, activeDoc.content)}
-                  className="px-3 py-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-xs font-medium text-stone-800 dark:text-stone-200 transition flex items-center gap-1"
+                  className="px-3 py-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-xs font-medium text-stone-800 dark:text-stone-200 transition flex items-center gap-1 cursor-pointer"
                 >
                   <Copy className="w-3.5 h-3.5" />
-                  <span>Copy</span>
+                  <span>{t('savedCopy', 'Copy')}</span>
                 </button>
                 <button
                   onClick={() => handleShare(activeDoc)}
-                  className="px-3 py-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-xs font-medium text-stone-800 dark:text-stone-200 transition flex items-center gap-1"
+                  className="px-3 py-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-xs font-medium text-stone-800 dark:text-stone-200 transition flex items-center gap-1 cursor-pointer"
                 >
                   <Share2 className="w-3.5 h-3.5" />
-                  <span>Share</span>
+                  <span>{t('savedShare', 'Share')}</span>
                 </button>
               </div>
 
@@ -371,16 +373,16 @@ export const SavedView: React.FC = () => {
                 {isEditing && (
                   <button
                     onClick={handleSaveEdit}
-                    className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition"
+                    className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition cursor-pointer"
                   >
-                    Save Changes
+                    {t('savedSave', 'Save Changes')}
                   </button>
                 )}
                 <button
                   onClick={() => setActiveDoc(null)}
-                  className="px-4 py-1.5 rounded-xl border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-xs font-medium"
+                  className="px-4 py-1.5 rounded-xl border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 text-xs font-medium cursor-pointer"
                 >
-                  Close
+                  {t('savedClose', 'Close')}
                 </button>
               </div>
             </div>

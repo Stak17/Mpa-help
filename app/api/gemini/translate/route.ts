@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { gemini, DEFAULT_GEMINI_MODEL } from '@/lib/geminiServer';
-import { TRANSLATOR_SYSTEM_PROMPT } from '@/config/prompts';
+import { generateGeminiContent } from '@/lib/geminiServer';
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English',
+  lg: 'Luganda (Oluganda)',
+  xog: 'Lusoga (Olusoga)',
+  nyn: 'Runyankole-Rukiga',
+  ach: 'Acholi / Luo (Leb Lwo)',
+  teo: 'Ateso',
+  lgg: 'Lugbara (Lugbara ti)',
+  sw: 'Swahili (Kiswahili)',
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,10 +21,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Text to translate is required.' }, { status: 400 });
     }
 
-    const fromLang = from === 'lg' ? 'Luganda' : 'English';
-    const toLang = to === 'lg' ? 'Luganda' : 'English';
+    const fromLangName = LANGUAGE_NAMES[from] || from;
+    const toLangName = LANGUAGE_NAMES[to] || to;
 
-    const promptText = `Translate the following text from ${fromLang} to ${toLang}.
+    const systemPrompt = `You are an expert native linguist and translator specializing in Ugandan languages and East African Swahili.
+You have fluent, natural mastery of:
+- English
+- Luganda (Oluganda - Central Uganda)
+- Lusoga (Olusoga - Busoga / Eastern Uganda)
+- Runyankole-Rukiga (Western Uganda)
+- Acholi / Luo (Leb Lwo - Northern Uganda)
+- Ateso (Teso / Eastern Uganda)
+- Lugbara (Lugbara ti - West Nile)
+- Swahili (Kiswahili - East Africa)
+
+Your translations are:
+1. Highly natural, culturally fluent, and contextually accurate.
+2. Respectful, preserving authentic greetings, honorifics, and polite manners.
+3. Clean and directly usable by everyday people, job seekers, and business owners.`;
+
+    const promptText = `Please translate the following text from ${fromLangName} to ${toLangName}.
 
 Original Text:
 """
@@ -22,23 +48,23 @@ ${text.trim()}
 """
 
 Provide:
-1. The most natural, culturally fluent translation.
-2. If there are alternative formal vs. casual ways to say it, provide both.
-3. A short helpful note on cultural context, polite nuance, or pronunciation if relevant.
-Keep formatting clean and easy to copy.`;
+1. **Primary Translation**: The most natural, culturally authentic translation.
+2. **Alternative phrasing** (if applicable, e.g. formal vs. casual / respectful greeting).
+3. **Short pronunciation or cultural context note** (1-2 brief sentences if helpful).
 
-    const response = await gemini.models.generateContent({
-      model: DEFAULT_GEMINI_MODEL,
+Keep the formatting clean, clear, and easy to copy.`;
+
+    const result = await generateGeminiContent({
       contents: promptText,
       config: {
-        systemInstruction: TRANSLATOR_SYSTEM_PROMPT,
-        temperature: 0.3, // Lower temperature for more faithful translations
+        systemInstruction: systemPrompt,
+        temperature: 0.3,
       },
     });
 
     return NextResponse.json({
-      translation: response.text || '',
-      model: DEFAULT_GEMINI_MODEL,
+      translation: result.text || '',
+      model: result.model,
     });
   } catch (error: any) {
     console.error('API Gemini Translate error:', error);

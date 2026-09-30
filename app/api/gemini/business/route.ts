@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { gemini, DEFAULT_GEMINI_MODEL } from '@/lib/geminiServer';
+import { generateGeminiContent } from '@/lib/geminiServer';
 import { BUSINESS_MARKETING_SYSTEM_PROMPT } from '@/config/prompts';
 import { BusinessProfileItem } from '@/types';
 
@@ -44,8 +44,7 @@ Instructions:
 - Include appropriate emojis, catchy hooks, and phone/location placeholders.`;
     }
 
-    const response = await gemini.models.generateContent({
-      model: DEFAULT_GEMINI_MODEL,
+    const result = await generateGeminiContent({
       contents: userPrompt,
       config: {
         systemInstruction: BUSINESS_MARKETING_SYSTEM_PROMPT,
@@ -54,8 +53,8 @@ Instructions:
     });
 
     return NextResponse.json({
-      content: response.text || '',
-      model: DEFAULT_GEMINI_MODEL,
+      content: result.text || '',
+      model: result.model,
     });
   } catch (error: any) {
     console.error('API Gemini Business error:', error);

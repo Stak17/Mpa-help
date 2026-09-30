@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { gemini, DEFAULT_GEMINI_MODEL } from '@/lib/geminiServer';
+import { generateGeminiContent } from '@/lib/geminiServer';
 import { INTERVIEW_COACH_SYSTEM_PROMPT } from '@/config/prompts';
 
 export async function POST(req: NextRequest) {
@@ -31,8 +31,7 @@ Please provide a constructive review:
       return NextResponse.json({ error: 'Invalid mode provided.' }, { status: 400 });
     }
 
-    const response = await gemini.models.generateContent({
-      model: DEFAULT_GEMINI_MODEL,
+    const result = await generateGeminiContent({
       contents: userPrompt,
       config: {
         systemInstruction: INTERVIEW_COACH_SYSTEM_PROMPT,
@@ -41,8 +40,8 @@ Please provide a constructive review:
     });
 
     return NextResponse.json({
-      result: response.text || '',
-      model: DEFAULT_GEMINI_MODEL,
+      result: result.text || '',
+      model: result.model,
     });
   } catch (error: any) {
     console.error('API Gemini Interview error:', error);

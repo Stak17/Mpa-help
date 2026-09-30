@@ -15,6 +15,7 @@ import {
 import { useAuth } from '@/services/authContext';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
 import { useToast } from '@/components/common/ToastProvider';
+import { useTranslation } from '@/services/i18nContext';
 
 interface WorkViewProps {
   onOpenCVBuilder: () => void;
@@ -23,6 +24,7 @@ interface WorkViewProps {
 
 export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCoverLetter }) => {
   const { recordUsage } = useAuth();
+  const { t, language } = useTranslation();
   const toast = useToast();
 
   const [activeTab, setActiveTab] = useState<'interview' | 'career_profile'>('interview');
@@ -51,10 +53,10 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
 
   // Career profile state
   const [careerGoals, setCareerGoals] = useState({
-    targetRole: 'Retail Store Supervisor',
-    targetSalaryUGX: '900,000',
-    preferredLocation: 'Kampala or Entebbe',
-    availability: 'Immediate',
+    targetRole: '',
+    targetSalaryUGX: '',
+    preferredLocation: '',
+    availability: '',
   });
 
   const handleGenerateQuestions = async () => {
@@ -71,6 +73,7 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
           mode: 'generate_questions',
           jobRole: selectedRole,
           experienceLevel,
+          language,
         }),
       });
       const data = await res.json();
@@ -78,7 +81,7 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
 
       setGeneratedQuestions(data.result);
       setCurrentQuestion(`Tell me about a time you handled a difficult customer or challenging situation at work.`);
-      toast.success('Interview questions ready!');
+      toast.success(t('workGenQuestionsBtn', 'Interview questions ready!'));
     } catch (e: any) {
       console.error(e);
       toast.error('Could not generate questions. Please try again.');
@@ -104,12 +107,13 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
           jobRole: selectedRole,
           question: currentQuestion,
           userAnswer,
+          language,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setFeedback(data.result);
-      toast.success('Evaluation and tips ready!');
+      toast.success(t('workFeedbackTitle', 'Evaluation and tips ready!'));
     } catch (e: any) {
       console.error(e);
       toast.error('Evaluation failed. Please try again.');
@@ -128,10 +132,10 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
           </div>
           <div>
             <h2 className="text-lg sm:text-xl font-bold text-stone-900 dark:text-white">
-              Find Work & Career Hub
+              {t('workTitle', 'Find Work & Career Hub')}
             </h2>
             <p className="text-xs text-stone-500 dark:text-stone-400">
-              Prepare for Ugandan job opportunities with CVs, cover letters, and interview coaching
+              {t('workSubtitle', 'Prepare for Ugandan job opportunities with CVs, cover letters, and interview coaching')}
             </p>
           </div>
         </div>
@@ -140,16 +144,16 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
         <div className="flex gap-2">
           <button
             onClick={onOpenCVBuilder}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
           >
             <FileCheck className="w-3.5 h-3.5" />
-            <span>CV Builder</span>
+            <span>{t('workOpenCvBtn', 'CV Builder')}</span>
           </button>
           <button
             onClick={onOpenCoverLetter}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-stone-800 dark:text-stone-200 text-xs font-semibold transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-stone-800 dark:text-stone-200 text-xs font-semibold transition cursor-pointer"
           >
-            <span>Cover Letter</span>
+            <span>{t('workOpenCoverBtn', 'Cover Letter')}</span>
           </button>
         </div>
       </div>
@@ -158,23 +162,23 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
       <div className="flex gap-2 border-b border-stone-200 dark:border-stone-800 pb-2">
         <button
           onClick={() => setActiveTab('interview')}
-          className={`pb-2 px-3 text-xs sm:text-sm font-bold transition border-b-2 ${
+          className={`pb-2 px-3 text-xs sm:text-sm font-bold transition border-b-2 cursor-pointer ${
             activeTab === 'interview'
               ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400'
               : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
           }`}
         >
-          Interview Practice & Feedback
+          {t('workTabInterview', 'Interview Practice & Feedback')}
         </button>
         <button
           onClick={() => setActiveTab('career_profile')}
-          className={`pb-2 px-3 text-xs sm:text-sm font-bold transition border-b-2 ${
+          className={`pb-2 px-3 text-xs sm:text-sm font-bold transition border-b-2 cursor-pointer ${
             activeTab === 'career_profile'
               ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400'
               : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
           }`}
         >
-          Career Profile & Goals
+          {t('workTabCareer', 'Career Profile & Goals')}
         </button>
       </div>
 
@@ -183,17 +187,17 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
           {/* Role selector form */}
           <div className="bg-white dark:bg-stone-900 p-4 sm:p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
             <h3 className="text-sm font-bold text-stone-900 dark:text-white uppercase tracking-wider">
-              Step 1: Select Target Job in Uganda
+              {t('workSelectRole', 'Step 1: Select Target Job in Uganda')}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  Job Role:
+                  {t('workSelectRole', 'Job Role:')}
                 </label>
                 <select
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 cursor-pointer"
                 >
                   {jobRoles.map((role) => (
                     <option key={role} value={role}>
@@ -205,12 +209,12 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
 
               <div>
                 <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  Experience Level:
+                  {t('workExpLevel', 'Experience Level:')}
                 </label>
                 <select
                   value={experienceLevel}
                   onChange={(e) => setExperienceLevel(e.target.value)}
-                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100"
+                  className="w-full text-xs sm:text-sm p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 cursor-pointer"
                 >
                   <option value="First-Time Job Seeker / Youth">First-Time Job Seeker / Youth</option>
                   <option value="Entry to Mid Level">Entry to Mid Level (1 - 3 yrs)</option>
@@ -222,17 +226,17 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
             <button
               onClick={handleGenerateQuestions}
               disabled={loading}
-              className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2"
+              className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Preparing Questions...</span>
+                  <span>{t('workGenQuestionsLoading', 'Preparing Questions...')}</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  <span>Generate Interview Questions</span>
+                  <span>{t('workGenQuestionsBtn', 'Generate Interview Questions')}</span>
                 </>
               )}
             </button>
@@ -242,7 +246,7 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
           {generatedQuestions && (
             <div className="bg-white dark:bg-stone-900 p-4 sm:p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs space-y-3">
               <h3 className="text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider">
-                Common Ugandan Interview Questions for {selectedRole}:
+                {t('workPracticeQTitle', 'Common Ugandan Interview Questions')} ({selectedRole}):
               </h3>
               <div className="p-3 bg-stone-50 dark:bg-stone-800/60 rounded-xl text-xs sm:text-sm whitespace-pre-wrap leading-relaxed text-stone-800 dark:text-stone-200">
                 {generatedQuestions}
@@ -253,12 +257,12 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
           {/* Step 2: Practice answering one question */}
           <div className="bg-white dark:bg-stone-900 p-4 sm:p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
             <h3 className="text-sm font-bold text-stone-900 dark:text-white uppercase tracking-wider">
-              Step 2: Practice Your Answer & Get Constructive Feedback
+              {t('workTabInterview', 'Step 2: Practice Your Answer & Get Constructive Feedback')}
             </h3>
 
             <div>
               <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                Question to practice:
+                {t('workPracticeQTitle', 'Question to practice:')}
               </label>
               <input
                 type="text"
@@ -272,13 +276,13 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
             <form onSubmit={handleEvaluateAnswer} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  Type your answer as if speaking in the interview:
+                  {t('workYourAnswer', 'Type your answer as if speaking in the interview:')}
                 </label>
                 <textarea
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}
                   rows={4}
-                  placeholder="e.g. I am a hardworking and honest person. At my previous shop, I was never late and balanced the cash book every evening without any shortages..."
+                  placeholder={t('workAnswerPlaceholder', 'Type your answer or how you would respond in an interview...')}
                   className="w-full text-xs sm:text-sm p-3 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
@@ -286,17 +290,17 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
               <button
                 type="submit"
                 disabled={evaluating || !userAnswer.trim()}
-                className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2"
+                className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 {evaluating ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Evaluating Your Answer...</span>
+                    <span>{t('workEvaluating', 'Evaluating Your Answer...')}</span>
                   </>
                 ) : (
                   <>
                     <Award className="w-4 h-4" />
-                    <span>Get AI Feedback & Sample Answer</span>
+                    <span>{t('workEvaluateBtn', 'Get AI Feedback & Sample Answer')}</span>
                   </>
                 )}
               </button>
@@ -306,7 +310,7 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
             {feedback && (
               <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-900 space-y-3">
                 <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                  Coach Review & Sample Answer:
+                  {t('workFeedbackTitle', 'Coach Review & Sample Answer:')}
                 </h4>
                 <div className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed text-stone-800 dark:text-stone-200">
                   {feedback}
@@ -328,11 +332,11 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
         /* Career Profile */
         <div className="bg-white dark:bg-stone-900 p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs space-y-4">
           <h3 className="font-bold text-sm text-stone-900 dark:text-white uppercase tracking-wider">
-            Your Ugandan Career Profile
+            {t('workTabCareer', 'Your Ugandan Career Profile')}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
-              <label className="text-stone-600 dark:text-stone-400 block mb-1">Target Role:</label>
+              <label className="text-stone-600 dark:text-stone-400 block mb-1">{t('workTargetRole', 'Target Role:')}</label>
               <input
                 type="text"
                 value={careerGoals.targetRole}
@@ -342,7 +346,7 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
             </div>
             <div>
               <label className="text-stone-600 dark:text-stone-400 block mb-1">
-                Target Monthly Salary (UGX):
+                {t('workTargetSalary', 'Target Monthly Salary (UGX):')}
               </label>
               <input
                 type="text"
@@ -352,7 +356,7 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
               />
             </div>
             <div>
-              <label className="text-stone-600 dark:text-stone-400 block mb-1">Preferred Location:</label>
+              <label className="text-stone-600 dark:text-stone-400 block mb-1">{t('workPreferredLocation', 'Preferred Location:')}</label>
               <input
                 type="text"
                 value={careerGoals.preferredLocation}
@@ -361,7 +365,7 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
               />
             </div>
             <div>
-              <label className="text-stone-600 dark:text-stone-400 block mb-1">Availability:</label>
+              <label className="text-stone-600 dark:text-stone-400 block mb-1">{t('workAvailability', 'Availability:')}</label>
               <input
                 type="text"
                 value={careerGoals.availability}
@@ -373,10 +377,10 @@ export const WorkView: React.FC<WorkViewProps> = ({ onOpenCVBuilder, onOpenCover
 
           <div className="pt-3 border-t border-stone-100 dark:border-stone-800 flex justify-end">
             <button
-              onClick={() => toast.success('Career profile saved!')}
+              onClick={() => toast.success(t('workSavedCareerSuccess', 'Career profile saved!'))}
               className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-xs transition hover:bg-emerald-700 cursor-pointer"
             >
-              Save Profile
+              {t('workSaveCareerProfile', 'Save Profile')}
             </button>
           </div>
         </div>

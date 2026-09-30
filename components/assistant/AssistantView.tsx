@@ -14,6 +14,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/services/authContext';
+import { useTranslation } from '@/services/i18nContext';
 import { ChatMessage, ConversationItem } from '@/types';
 import { DatabaseService } from '@/services/databaseService';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
@@ -28,17 +29,43 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   initialQuery,
   onClearInitialQuery,
 }) => {
-  const { user, userProfile, recordUsage } = useAuth();
+  const { user, userProfile, effectiveUserId, recordUsage } = useAuth();
+  const { t, language } = useTranslation();
   const toast = useToast();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content:
-        'Hello! Oli otyanno? I am **Mpa Help** 🇺🇬. How can I assist you with everyday life today? You can ask me to draft letters, review your monthly budget, write a WhatsApp business advert, create a CV, or translate into Luganda.',
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  // Initialize or update welcome greeting based on active language
+  useEffect(() => {
+    setMessages((prev) => {
+      const welcomeContent = t(
+        'assistantWelcome',
+        'Hello! I am Mpa Help 🇺🇬. How can I assist you with everyday life today?'
+      );
+      if (prev.length === 0) {
+        return [
+          {
+            id: 'welcome',
+            role: 'assistant',
+            content: welcomeContent,
+            timestamp: new Date().toISOString(),
+          },
+        ];
+      }
+      // If first message is welcome and no user messages yet, update it
+      if (prev.length === 1 && prev[0].id === 'welcome') {
+        return [
+          {
+            id: 'welcome',
+            role: 'assistant',
+            content: welcomeContent,
+            timestamp: new Date().toISOString(),
+          },
+        ];
+      }
+      return prev;
+    });
+  }, [language, t]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -74,6 +101,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
         body: JSON.stringify({
           prompt: queryText,
           conversationHistory: newHistory.filter((m) => m.id !== 'welcome'),
+          language,
         }),
       });
 
@@ -93,10 +121,10 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
       setMessages(finalMessages);
 
       // Auto-save conversation state
-      const conversationId = 'conv_' + (user?.uid || 'guest') + '_active';
+      const conversationId = 'conv_' + effectiveUserId + '_active';
       await DatabaseService.saveConversation({
         conversationId,
-        userId: user?.uid || userProfile?.userId || 'guest',
+        userId: effectiveUserId,
         title: queryText.slice(0, 50),
         category: 'Ask Mpa Help',
         messages: finalMessages,
@@ -158,7 +186,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
     try {
       const docItem = {
         documentId: 'doc_' + Date.now(),
-        userId: user?.uid || userProfile?.userId || 'guest',
+        userId: effectiveUserId,
         type: 'general_message',
         title: msg.content.slice(0, 45) + '...',
         content: msg.content,
@@ -354,7 +382,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your question or request..."
+            placeholder={t('askPlaceholder', 'Type your question or request...')}
             disabled={loading}
             className="flex-1 px-3 py-2.5 text-xs sm:text-sm bg-transparent text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none"
           />

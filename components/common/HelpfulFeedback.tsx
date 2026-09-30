@@ -11,7 +11,7 @@ interface HelpfulFeedbackProps {
 }
 
 export const HelpfulFeedback: React.FC<HelpfulFeedbackProps> = ({ featureName, contextTitle }) => {
-  const { user, userProfile } = useAuth();
+  const { effectiveUserId } = useAuth();
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [rating, setRating] = useState<'helpful' | 'not_helpful' | null>(null);
   const [showDetailInput, setShowDetailInput] = useState<boolean>(false);
@@ -30,7 +30,7 @@ export const HelpfulFeedback: React.FC<HelpfulFeedbackProps> = ({ featureName, c
       setSubmitting(true);
       await DatabaseService.submitFeedback({
         feedbackId: 'fb_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-        userId: user?.uid || userProfile?.userId || 'guest',
+        userId: effectiveUserId,
         type: 'helpful',
         message: contextTitle ? `Helpful response on: ${contextTitle}` : 'Positive rating',
         feature: featureName,
@@ -52,7 +52,7 @@ export const HelpfulFeedback: React.FC<HelpfulFeedbackProps> = ({ featureName, c
       setSubmitting(true);
       await DatabaseService.submitFeedback({
         feedbackId: 'fb_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-        userId: user?.uid || userProfile?.userId || 'guest',
+        userId: effectiveUserId,
         type: rating || 'not_helpful',
         message: feedbackNote || 'User indicated output could be improved.',
         feature: featureName,

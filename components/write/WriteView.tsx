@@ -16,9 +16,11 @@ import { useAuth } from '@/services/authContext';
 import { DatabaseService } from '@/services/databaseService';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
 import { useToast } from '@/components/common/ToastProvider';
+import { useTranslation } from '@/services/i18nContext';
 
 export const WriteView: React.FC = () => {
-  const { user, userProfile, recordUsage } = useAuth();
+  const { user, userProfile, effectiveUserId, recordUsage } = useAuth();
+  const { t, language } = useTranslation();
   const toast = useToast();
 
   const categories = [
@@ -118,7 +120,7 @@ export const WriteView: React.FC = () => {
     try {
       const docItem = {
         documentId: 'doc_' + Date.now(),
-        userId: user?.uid || userProfile?.userId || 'guest',
+        userId: effectiveUserId,
         type: selectedCategory,
         title: `${categories.find((c) => c.id === selectedCategory)?.label} - ${formData.targetNameOrCompany || 'Untitled'}`,
         content: generatedDoc,
@@ -152,10 +154,10 @@ export const WriteView: React.FC = () => {
           </div>
           <div>
             <h2 className="text-lg sm:text-xl font-bold text-stone-900 dark:text-white">
-              Write Something
+              {t('writeTitle', 'Write Something')}
             </h2>
             <p className="text-xs text-stone-500 dark:text-stone-400">
-              Draft professional job applications, school letters, landlord notices, and complaints
+              {t('writeSubtitle', 'Draft polite letters, job applications, landlord messages, and school notes in seconds')}
             </p>
           </div>
         </div>
@@ -168,12 +170,12 @@ export const WriteView: React.FC = () => {
             {/* Category Select */}
             <div>
               <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                Document Category:
+                {t('writeDocType', 'Document Category:')}
               </label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full text-xs sm:text-sm p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
               >
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -186,21 +188,21 @@ export const WriteView: React.FC = () => {
             {/* Tone Selector */}
             <div>
               <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                Tone:
+                {t('writeTone', 'Tone:')}
               </label>
               <div className="grid grid-cols-4 gap-1.5">
-                {tones.map((t) => (
+                {tones.map((tItem) => (
                   <button
-                    key={t}
+                    key={tItem}
                     type="button"
-                    onClick={() => setSelectedTone(t)}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-medium transition ${
-                      selectedTone === t
+                    onClick={() => setSelectedTone(tItem)}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-medium transition cursor-pointer ${
+                      selectedTone === tItem
                         ? 'bg-emerald-600 text-white shadow-2xs font-semibold'
                         : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200'
                     }`}
                   >
-                    {t}
+                    {tItem}
                   </button>
                 ))}
               </div>
@@ -210,7 +212,7 @@ export const WriteView: React.FC = () => {
             <div className="space-y-3 pt-1">
               <div>
                 <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  Your Full Name:
+                  {t('writeName', 'Your Full Name:')}
                 </label>
                 <input
                   type="text"
@@ -223,7 +225,7 @@ export const WriteView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  Recipient Name, School or Company:
+                  {t('writeRecipient', 'Recipient Name, School or Company:')}
                 </label>
                 <input
                   type="text"
@@ -236,7 +238,7 @@ export const WriteView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  Position or Main Purpose:
+                  {t('writePurpose', 'Position or Main Purpose:')}
                 </label>
                 <input
                   type="text"
@@ -249,7 +251,7 @@ export const WriteView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  Key Experience or Context:
+                  {t('writeExp', 'Key Experience or Context:')}
                 </label>
                 <textarea
                   value={formData.experienceOrContext}
@@ -262,7 +264,7 @@ export const WriteView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  Additional Details to Include:
+                  {t('writeExtra', 'Additional Details to Include:')}
                 </label>
                 <textarea
                   value={formData.extraDetails}
@@ -283,17 +285,17 @@ export const WriteView: React.FC = () => {
             <button
               onClick={handleGenerate}
               disabled={loading}
-              className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-sm transition flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Drafting Document...</span>
+                  <span>{t('writeGenerating', 'Writing Document...')}</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  <span>Generate Document</span>
+                  <span>{t('writeGenerateBtn', 'Generate Document')}</span>
                 </>
               )}
             </button>
@@ -305,7 +307,7 @@ export const WriteView: React.FC = () => {
           <div className="bg-white dark:bg-stone-900 p-4 sm:p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-xs flex flex-col h-full min-h-[420px]">
             <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-stone-800">
               <span className="font-bold text-xs uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                Generated Document
+                {t('writePreview', 'Generated Document')}
               </span>
               {generatedDoc && (
                 <button

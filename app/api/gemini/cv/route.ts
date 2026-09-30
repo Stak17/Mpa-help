@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { gemini, DEFAULT_GEMINI_MODEL } from '@/lib/geminiServer';
+import { generateGeminiContent } from '@/lib/geminiServer';
 import { CV_GENERATOR_SYSTEM_PROMPT } from '@/config/prompts';
 import { CVData } from '@/types';
 
@@ -58,8 +58,7 @@ Format instructions:
 - Do not make up qualifications or past employers.
 - Ensure contact details and sections are laid out with dignity and clarity.`;
 
-    const response = await gemini.models.generateContent({
-      model: DEFAULT_GEMINI_MODEL,
+    const result = await generateGeminiContent({
       contents: promptText,
       config: {
         systemInstruction: CV_GENERATOR_SYSTEM_PROMPT,
@@ -68,8 +67,8 @@ Format instructions:
     });
 
     return NextResponse.json({
-      cvText: response.text || '',
-      model: DEFAULT_GEMINI_MODEL,
+      cvText: result.text || '',
+      model: result.model,
     });
   } catch (error: any) {
     console.error('API Gemini CV error:', error);

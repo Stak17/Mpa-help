@@ -19,9 +19,11 @@ import { DatabaseService } from '@/services/databaseService';
 import { formatUGX } from '@/config/plans';
 import { HelpfulFeedback } from '@/components/common/HelpfulFeedback';
 import { useToast } from '@/components/common/ToastProvider';
+import { useTranslation } from '@/services/i18nContext';
 
 export const MoneyView: React.FC = () => {
-  const { user, userProfile, recordUsage } = useAuth();
+  const { user, userProfile, effectiveUserId, recordUsage } = useAuth();
+  const { t, language } = useTranslation();
   const toast = useToast();
 
   const standardCategories = [
@@ -37,59 +39,8 @@ export const MoneyView: React.FC = () => {
     'Other / Miscellaneous',
   ];
 
-  const [incomeUGX, setIncomeUGX] = useState<number>(850000);
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([
-    {
-      expenseId: 'exp_1',
-      userId: 'default',
-      category: 'Rent',
-      amount: 300000,
-      description: 'Muzigo / Apartment monthly rent',
-      date: '2026-09-01',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      expenseId: 'exp_2',
-      userId: 'default',
-      category: 'Food & Market',
-      amount: 200000,
-      description: 'Monthly groceries & market shopping',
-      date: '2026-09-02',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      expenseId: 'exp_3',
-      userId: 'default',
-      category: 'Transport (Matatu/Boda)',
-      amount: 120000,
-      description: 'Daily taxi fare to work and back',
-      date: '2026-09-03',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      expenseId: 'exp_4',
-      userId: 'default',
-      category: 'Airtime & Data (MTN/Airtel)',
-      amount: 50000,
-      description: 'MTN monthly internet bundle & calls',
-      date: '2026-09-05',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      expenseId: 'exp_5',
-      userId: 'default',
-      category: 'Electricity (Yaka)',
-      amount: 40000,
-      description: 'Yaka tokens for house',
-      date: '2026-09-05',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ]);
+  const [incomeUGX, setIncomeUGX] = useState<number>(0);
+  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
 
   // Form for new expense
   const [showAddModal, setShowAddModal] = useState(false);
@@ -99,8 +50,8 @@ export const MoneyView: React.FC = () => {
   const [newDesc, setNewDesc] = useState('');
 
   // Savings Goal
-  const [goalAmount, setGoalAmount] = useState<number>(1500000);
-  const [currentSavings, setCurrentSavings] = useState<number>(300000);
+  const [goalAmount, setGoalAmount] = useState<number>(0);
+  const [currentSavings, setCurrentSavings] = useState<number>(0);
   const [targetMonths, setTargetMonths] = useState<number>(6);
 
   // AI Advisor
@@ -110,12 +61,14 @@ export const MoneyView: React.FC = () => {
   // Load existing expenses from Firestore or local storage on mount
   useEffect(() => {
     (async () => {
-      const loaded = await DatabaseService.getExpenses(user?.uid);
+      const loaded = await DatabaseService.getExpenses(effectiveUserId);
       if (loaded && loaded.length > 0) {
         setExpenses(loaded);
+      } else {
+        setExpenses([]);
       }
     })();
-  }, [user]);
+  }, [effectiveUserId]);
 
   // Calculations
   const totalExpenses = expenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
@@ -136,7 +89,7 @@ export const MoneyView: React.FC = () => {
     const finalCat = newCat === 'CUSTOM' ? customCat.trim() || 'Custom' : newCat;
     const item: ExpenseItem = {
       expenseId: 'exp_' + Date.now(),
-      userId: user?.uid || userProfile?.userId || 'guest',
+      userId: effectiveUserId,
       category: finalCat,
       amount: amountNum,
       description: newDesc,
@@ -159,7 +112,7 @@ export const MoneyView: React.FC = () => {
   const handleDeleteExpense = async (id: string) => {
     const updated = expenses.filter((e) => e.expenseId !== id);
     setExpenses(updated);
-    await DatabaseService.deleteExpense(id, user?.uid);
+    await DatabaseService.deleteExpense(id, effectiveUserId);
   };
 
   const handleAskAIAdvice = async () => {

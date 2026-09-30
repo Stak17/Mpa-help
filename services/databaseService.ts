@@ -8,8 +8,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
-  limit,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { handleFirestoreError, OperationType } from '@/lib/firestoreErrors';
@@ -20,27 +18,31 @@ import {
   BusinessProfileItem,
   ConversationItem,
   FeedbackItem,
-  SubscriptionItem,
-  UsageEventItem,
 } from '@/types';
 
-// Helper for localStorage fallback (useful for guest or offline mode)
 const LOCAL_STORAGE_PREFIX = 'mpa_help_';
 
-function getLocal<T>(key: string, defaultValue: T): T {
+function getUserKey(key: string, userId?: string): string {
+  const safeUser = userId && userId.trim() ? userId.trim() : 'guest';
+  return `${LOCAL_STORAGE_PREFIX}${safeUser}_${key}`;
+}
+
+function getLocal<T>(key: string, userId?: string, defaultValue: T = [] as unknown as T): T {
   if (typeof window === 'undefined') return defaultValue;
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_PREFIX + key);
+    const storageKey = getUserKey(key, userId);
+    const raw = localStorage.getItem(storageKey);
     return raw ? JSON.parse(raw) : defaultValue;
   } catch {
     return defaultValue;
   }
 }
 
-function setLocal<T>(key: string, value: T): void {
+function setLocal<T>(key: string, value: T, userId?: string): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(LOCAL_STORAGE_PREFIX + key, JSON.stringify(value));
+    const storageKey = getUserKey(key, userId);
+    localStorage.setItem(storageKey, JSON.stringify(value));
   } catch (e) {
     console.error('Local storage write failed', e);
   }
@@ -71,7 +73,6 @@ export const DatabaseService = {
   },
 
   async incrementUserUsage(userId: string, currentUsage: number): Promise<number> {
-    const path = `users/${userId}`;
     const newUsage = currentUsage + 1;
     try {
       await updateDoc(doc(db, 'users', userId), {
@@ -87,204 +88,198 @@ export const DatabaseService = {
 
   // --- DOCUMENTS ---
   async saveDocument(item: DocumentItem): Promise<void> {
-    const path = `documents/${item.documentId}`;
     try {
       await setDoc(doc(db, 'documents', item.documentId), item);
-      // Also cache locally
-      const list = getLocal<DocumentItem[]>('docs', []);
+      const list = getLocal<DocumentItem[]>('docs', item.userId, []);
       const updated = [item, ...list.filter((d) => d.documentId !== item.documentId)];
-      setLocal('docs', updated);
+      setLocal('docs', updated, item.userId);
     } catch (err) {
-      // If unauthorized (e.g. guest), save locally
-      const list = getLocal<DocumentItem[]>('docs', []);
+      const list = getLocal<DocumentItem[]>('docs', item.userId, []);
       const updated = [item, ...list.filter((d) => d.documentId !== item.documentId)];
-      setLocal('docs', updated);
-      console.warn('Saved document locally:', item.title);
+      setLocal('docs', updated, item.userId);
     }
   },
 
   async getDocuments(userId?: string): Promise<DocumentItem[]> {
-    if (!userId) {
-      return getLocal<DocumentItem[]>('docs', []);
+    if (!userId || userId === 'guest') {
+      return getLocal<DocumentItem[]>('docs', 'guest', []);
     }
-    const path = 'documents';
     try {
       const q = query(collection(db, 'documents'), where('userId', '==', userId));
       const snap = await getDocs(q);
       const remote = snap.docs.map((d) => d.data() as DocumentItem);
-      // Merge with any offline items
-      const local = getLocal<DocumentItem[]>('docs', []);
-      const map = new Map<string, DocumentItem>();
-      remote.forEach((d) => map.set(d.documentId, d));
-      local.forEach((d) => map.set(d.documentId, d));
-      return Array.from(map.values()).sort(
+      // Sort newest first
+      const sorted = remote.sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
+      setLocal('docs', sorted, userId);
+      return sorted;
     } catch (err) {
-      console.warn('Failed to fetch remote documents, fallback to local', err);
-      return getLocal<DocumentItem[]>('docs', []);
+      console.warn('Failed to fetch remote documents, fallback to isolated local cache', err);
+      return getLocal<DocumentItem[]>('docs', userId, []);
     }
   },
 
   async deleteDocument(documentId: string, userId?: string): Promise<void> {
-    const path = `documents/${documentId}`;
     try {
-      if (userId) {
+      if (userId && userId !== 'guest') {
         await deleteDoc(doc(db, 'documents', documentId));
       }
     } catch (err) {
       console.warn('Remote doc delete failed', err);
     } finally {
-      const local = getLocal<DocumentItem[]>('docs', []);
+      const local = getLocal<DocumentItem[]>('docs', userId, []);
       setLocal(
         'docs',
-        local.filter((d) => d.documentId !== documentId)
+        local.filter((d) => d.documentId !== documentId),
+        userId
       );
     }
   },
 
   // --- EXPENSES & BUDGET ---
   async saveExpense(expense: ExpenseItem): Promise<void> {
-    const path = `expenses/${expense.expenseId}`;
     try {
       await setDoc(doc(db, 'expenses', expense.expenseId), expense);
     } catch (err) {
       console.warn('Remote save expense failed, saving locally', err);
     } finally {
-      const local = getLocal<ExpenseItem[]>('expenses', []);
+      const local = getLocal<ExpenseItem[]>('expenses', expense.userId, []);
       const updated = [expense, ...local.filter((e) => e.expenseId !== expense.expenseId)];
-      setLocal('expenses', updated);
+      setLocal('expenses', updated, expense.userId);
     }
   },
 
   async getExpenses(userId?: string): Promise<ExpenseItem[]> {
-    if (!userId) {
-      return getLocal<ExpenseItem[]>('expenses', []);
+    if (!userId || userId === 'guest') {
+      return getLocal<ExpenseItem[]>('expenses', 'guest', []);
     }
-    const path = 'expenses';
     try {
       const q = query(collection(db, 'expenses'), where('userId', '==', userId));
       const snap = await getDocs(q);
       const remote = snap.docs.map((d) => d.data() as ExpenseItem);
-      return remote.length > 0 ? remote : getLocal<ExpenseItem[]>('expenses', []);
+      setLocal('expenses', remote, userId);
+      return remote;
     } catch (err) {
-      return getLocal<ExpenseItem[]>('expenses', []);
+      return getLocal<ExpenseItem[]>('expenses', userId, []);
     }
   },
 
   async deleteExpense(expenseId: string, userId?: string): Promise<void> {
     try {
-      if (userId) {
+      if (userId && userId !== 'guest') {
         await deleteDoc(doc(db, 'expenses', expenseId));
       }
     } catch (err) {
       console.warn('Delete expense error', err);
     } finally {
-      const local = getLocal<ExpenseItem[]>('expenses', []);
+      const local = getLocal<ExpenseItem[]>('expenses', userId, []);
       setLocal(
         'expenses',
-        local.filter((e) => e.expenseId !== expenseId)
+        local.filter((e) => e.expenseId !== expenseId),
+        userId
       );
     }
   },
 
   // --- BUSINESS PROFILES ---
   async saveBusinessProfile(profile: BusinessProfileItem): Promise<void> {
-    const path = `businessProfiles/${profile.businessId}`;
     try {
       await setDoc(doc(db, 'businessProfiles', profile.businessId), profile);
     } catch (err) {
       console.warn('Saving business locally', err);
     } finally {
-      const local = getLocal<BusinessProfileItem[]>('businesses', []);
+      const local = getLocal<BusinessProfileItem[]>('businesses', profile.userId, []);
       const updated = [profile, ...local.filter((b) => b.businessId !== profile.businessId)];
-      setLocal('businesses', updated);
+      setLocal('businesses', updated, profile.userId);
     }
   },
 
   async getBusinessProfiles(userId?: string): Promise<BusinessProfileItem[]> {
-    if (!userId) {
-      return getLocal<BusinessProfileItem[]>('businesses', []);
+    if (!userId || userId === 'guest') {
+      return getLocal<BusinessProfileItem[]>('businesses', 'guest', []);
     }
     try {
       const q = query(collection(db, 'businessProfiles'), where('userId', '==', userId));
       const snap = await getDocs(q);
       const remote = snap.docs.map((d) => d.data() as BusinessProfileItem);
-      return remote.length > 0 ? remote : getLocal<BusinessProfileItem[]>('businesses', []);
+      setLocal('businesses', remote, userId);
+      return remote;
     } catch (err) {
-      return getLocal<BusinessProfileItem[]>('businesses', []);
+      return getLocal<BusinessProfileItem[]>('businesses', userId, []);
     }
   },
 
   async deleteBusinessProfile(businessId: string, userId?: string): Promise<void> {
     try {
-      if (userId) {
+      if (userId && userId !== 'guest') {
         await deleteDoc(doc(db, 'businessProfiles', businessId));
       }
     } catch (err) {
       console.warn('Delete business error', err);
     } finally {
-      const local = getLocal<BusinessProfileItem[]>('businesses', []);
+      const local = getLocal<BusinessProfileItem[]>('businesses', userId, []);
       setLocal(
         'businesses',
-        local.filter((b) => b.businessId !== businessId)
+        local.filter((b) => b.businessId !== businessId),
+        userId
       );
     }
   },
 
   // --- CONVERSATIONS ---
   async saveConversation(conv: ConversationItem): Promise<void> {
-    const path = `conversations/${conv.conversationId}`;
     try {
       await setDoc(doc(db, 'conversations', conv.conversationId), conv);
     } catch (err) {
       console.warn('Saving conversation locally', err);
     } finally {
-      const local = getLocal<ConversationItem[]>('conversations', []);
+      const local = getLocal<ConversationItem[]>('conversations', conv.userId, []);
       const updated = [conv, ...local.filter((c) => c.conversationId !== conv.conversationId)];
-      setLocal('conversations', updated);
+      setLocal('conversations', updated, conv.userId);
     }
   },
 
   async getConversations(userId?: string): Promise<ConversationItem[]> {
-    if (!userId) {
-      return getLocal<ConversationItem[]>('conversations', []);
+    if (!userId || userId === 'guest') {
+      return getLocal<ConversationItem[]>('conversations', 'guest', []);
     }
     try {
       const q = query(collection(db, 'conversations'), where('userId', '==', userId));
       const snap = await getDocs(q);
       const remote = snap.docs.map((d) => d.data() as ConversationItem);
-      return remote.length > 0 ? remote : getLocal<ConversationItem[]>('conversations', []);
+      setLocal('conversations', remote, userId);
+      return remote;
     } catch (err) {
-      return getLocal<ConversationItem[]>('conversations', []);
+      return getLocal<ConversationItem[]>('conversations', userId, []);
     }
   },
 
   async deleteConversation(conversationId: string, userId?: string): Promise<void> {
     try {
-      if (userId) {
+      if (userId && userId !== 'guest') {
         await deleteDoc(doc(db, 'conversations', conversationId));
       }
     } catch (err) {
       console.warn('Delete conversation error', err);
     } finally {
-      const local = getLocal<ConversationItem[]>('conversations', []);
+      const local = getLocal<ConversationItem[]>('conversations', userId, []);
       setLocal(
         'conversations',
-        local.filter((c) => c.conversationId !== conversationId)
+        local.filter((c) => c.conversationId !== conversationId),
+        userId
       );
     }
   },
 
   // --- FEEDBACK ---
   async submitFeedback(feedback: FeedbackItem): Promise<void> {
-    const path = `feedback/${feedback.feedbackId}`;
     try {
       await setDoc(doc(db, 'feedback', feedback.feedbackId), feedback);
     } catch (err) {
       console.warn('Failed remote feedback, saving local', err);
-      const local = getLocal<FeedbackItem[]>('feedback', []);
-      setLocal('feedback', [feedback, ...local]);
+      const local = getLocal<FeedbackItem[]>('feedback', 'all', []);
+      setLocal('feedback', [feedback, ...local], 'all');
     }
   },
 
@@ -293,19 +288,19 @@ export const DatabaseService = {
       const snap = await getDocs(collection(db, 'feedback'));
       return snap.docs.map((d) => d.data() as FeedbackItem);
     } catch (err) {
-      return getLocal<FeedbackItem[]>('feedback', []);
+      return getLocal<FeedbackItem[]>('feedback', 'all', []);
     }
   },
 
   // --- CLEAR / DELETE ALL USER DATA ---
   async deleteAllUserData(userId: string): Promise<void> {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(LOCAL_STORAGE_PREFIX + 'docs');
-      localStorage.removeItem(LOCAL_STORAGE_PREFIX + 'expenses');
-      localStorage.removeItem(LOCAL_STORAGE_PREFIX + 'businesses');
-      localStorage.removeItem(LOCAL_STORAGE_PREFIX + 'conversations');
+      const safeUser = userId || 'guest';
+      localStorage.removeItem(getUserKey('docs', safeUser));
+      localStorage.removeItem(getUserKey('expenses', safeUser));
+      localStorage.removeItem(getUserKey('businesses', safeUser));
+      localStorage.removeItem(getUserKey('conversations', safeUser));
     }
-    // Delete from Firestore
     try {
       const docs = await this.getDocuments(userId);
       for (const d of docs) {

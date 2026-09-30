@@ -23,6 +23,7 @@ interface AuthContextType {
   loading: boolean;
   isGuest: boolean;
   isAdmin: boolean;
+  effectiveUserId: string;
   signInWithGoogle: (forceRedirect?: boolean) => Promise<void>;
   signInWithEmail: (email: string, displayName?: string) => Promise<void>;
   signOutUser: () => Promise<void>;
@@ -65,10 +66,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin: false,
       };
     }
+    const activeLang = (typeof window !== 'undefined' ? localStorage.getItem('mpa_lang') : null) || 'en';
     const stored = localStorage.getItem(GUEST_PROFILE_KEY);
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (activeLang && parsed.language !== activeLang) {
+          parsed.language = activeLang;
+          localStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify(parsed));
+        }
+        return parsed;
       } catch (e) {
         console.error(e);
       }
@@ -77,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       userId: 'guest_' + Math.random().toString(36).substring(2, 9),
       name: 'Guest User',
       email: 'guest@mpahelp.ug',
-      language: 'en',
+      language: activeLang,
       plan: 'free',
       monthlyAiUsage: 0,
       usageResetDate: new Date().toISOString(),
@@ -366,6 +373,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (!userProfile || userProfile.userId.startsWith('guest_') || !userProfile.email || userProfile.email.includes('guest@'))
   );
 
+  const effectiveUserId = isGuest ? 'guest' : (user?.uid || userProfile?.userId || 'guest');
+
   return (
     <AuthContext.Provider
       value={{
@@ -374,6 +383,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         isGuest,
         isAdmin,
+        effectiveUserId,
         signInWithGoogle,
         signInWithEmail,
         signOutUser,

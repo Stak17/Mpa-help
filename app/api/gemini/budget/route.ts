@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { gemini, DEFAULT_GEMINI_MODEL } from '@/lib/geminiServer';
+import { generateGeminiContent } from '@/lib/geminiServer';
 import { BUDGET_ASSISTANT_SYSTEM_PROMPT } from '@/config/prompts';
 import { ExpenseItem } from '@/types';
 
@@ -34,8 +34,7 @@ Provide:
 4. Concrete advice on reaching the savings goal if provided.
 5. Gentle reminder that this is personal budgeting guidance, not accredited financial advisory.`;
 
-    const response = await gemini.models.generateContent({
-      model: DEFAULT_GEMINI_MODEL,
+    const result = await generateGeminiContent({
       contents: promptText,
       config: {
         systemInstruction: BUDGET_ASSISTANT_SYSTEM_PROMPT,
@@ -44,14 +43,14 @@ Provide:
     });
 
     return NextResponse.json({
-      advice: response.text || '',
+      advice: result.text || '',
       summary: {
         income,
         totalExpenses,
         balance,
         expenseRatio: income > 0 ? Math.round((totalExpenses / income) * 100) : 0,
       },
-      model: DEFAULT_GEMINI_MODEL,
+      model: result.model,
     });
   } catch (error: any) {
     console.error('API Gemini Budget error:', error);

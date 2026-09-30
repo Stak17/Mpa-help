@@ -60,6 +60,22 @@ function runTests() {
   assert(weeklyTarget === 50000, 'Weekly target calculation correct (UGX 50,000)');
   assert(dailyTarget === 6667, 'Daily target calculation correct (~UGX 6,667)');
 
+  // Test 6: Language & Translations Complete Coverage
+  const { SUPPORTED_LANGUAGES, getLanguageName } = require('../config/languages');
+  const { TRANSLATIONS } = require('../config/translations');
+
+  assert(SUPPORTED_LANGUAGES.length === 8, '8 Ugandan languages are supported');
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const dict = TRANSLATIONS[lang.code];
+    assert(Boolean(dict), `Translations dictionary exists for ${lang.name} (${lang.code})`);
+    assert(Object.keys(dict).length >= 220, `Translations dictionary for ${lang.code} contains complete keys`);
+    assert(Boolean(dict.appName), `appName translated for ${lang.code}`);
+    assert(Boolean(dict.heroTitle), `heroTitle translated for ${lang.code}`);
+  }
+
+  assert(getLanguageName('lg') === 'Luganda', 'Language name resolver works for Luganda');
+  assert(getLanguageName('sw') === 'Swahili', 'Language name resolver works for Swahili');
+
   console.log(`\nTests finished: ${passed} passed, ${failed} failed.`);
   if (failed > 0) {
     process.exit(1);

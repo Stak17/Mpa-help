@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { gemini, DEFAULT_GEMINI_MODEL } from '@/lib/geminiServer';
+import { generateGeminiContent } from '@/lib/geminiServer';
 import { DOCUMENT_GENERATOR_SYSTEM_PROMPT } from '@/config/prompts';
 
 export async function POST(req: NextRequest) {
@@ -28,8 +28,7 @@ Instructions:
 3. Do not invent qualifications or falsehoods. If vital information was omitted, insert clear bracketed placeholders like [Insert Date] or [Insert Company Name].
 4. Output only the document text without unnecessary preamble.`;
 
-    const response = await gemini.models.generateContent({
-      model: DEFAULT_GEMINI_MODEL,
+    const result = await generateGeminiContent({
       contents: promptText,
       config: {
         systemInstruction: DOCUMENT_GENERATOR_SYSTEM_PROMPT,
@@ -37,11 +36,11 @@ Instructions:
       },
     });
 
-    const documentText = response.text || '';
+    const documentText = result.text || '';
 
     return NextResponse.json({
       document: documentText,
-      model: DEFAULT_GEMINI_MODEL,
+      model: result.model,
     });
   } catch (error: any) {
     console.error('API Gemini Write error:', error);
